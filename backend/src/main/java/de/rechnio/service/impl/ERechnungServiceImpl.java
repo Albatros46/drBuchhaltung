@@ -159,7 +159,13 @@ public class ERechnungServiceImpl implements ERechnungService {
 
         TradeParty seller = new TradeParty(org.getName(), org.getStreet(), org.getZip(), org.getCity(), org.getCountry());
         if (!isBlank(org.getSteuernummer())) seller.addTaxID(org.getSteuernummer());
-        if (!isBlank(org.getUstId())) seller.addVATID(org.getUstId());
+        if (!isBlank(org.getUstId())) {
+            seller.addVATID(org.getUstId());
+        } else if (!isBlank(org.getSteuernummer())) {
+            // BR-CO-26 verlangt BT-29, BT-30 oder BT-31. Ohne USt-IdNr. (haeufig bei Kleinunternehmern)
+            // dient die Steuernummer zusaetzlich als Verkaeuferkennung (BT-29).
+            seller.setID(org.getSteuernummer());
+        }
         if (!isBlank(org.getEmail())) seller.setEmail(org.getEmail());
         if (!isBlank(org.getContactName()) || !isBlank(org.getPhone())) {
             seller.setContact(new Contact(org.getContactName(), org.getPhone(), org.getEmail()));

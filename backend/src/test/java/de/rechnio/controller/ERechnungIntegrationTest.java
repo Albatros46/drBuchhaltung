@@ -83,6 +83,20 @@ class ERechnungIntegrationTest {
     }
 
     @Test
+    void sellerWithoutVatIdIsStillValid() throws Exception {
+        // Nur Steuernummer, keine USt-IdNr. (typisch fuer Kleinunternehmer): BR-CO-26 muss trotzdem erfuellt sein
+        String token = setUp(COMPLETE_ORG.formatted("").replace("\"ustId\":\"DE123456789\",", ""));
+        String invoiceId = issuedInvoice(token, customer(token, true));
+
+        byte[] xml = call(token, get("/api/invoices/" + invoiceId + "/xrechnung"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+        assertValid(xml, "ohne-ustid.xml");
+        byte[] pdf = call(token, get("/api/invoices/" + invoiceId + "/zugferd"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+        assertValid(pdf, "ohne-ustid.pdf");
+    }
+
+    @Test
     void stornoBecomesCreditNoteReferencingTheInvoice() throws Exception {
         String token = setUp(COMPLETE_ORG.formatted(""));
         String invoiceId = issuedInvoice(token, customer(token, true));
