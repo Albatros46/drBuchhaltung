@@ -24,7 +24,9 @@ import de.rechnio.config.CurrentUser;
 import de.rechnio.dto.InvoiceDraftRequest;
 import de.rechnio.dto.InvoiceResponse;
 import de.rechnio.dto.PaidRequest;
+import de.rechnio.dto.GeneratedFile;
 import de.rechnio.dto.PdfDocument;
+import de.rechnio.service.ERechnungService;
 import de.rechnio.service.InvoicePdfService;
 import de.rechnio.service.InvoiceService;
 import jakarta.validation.Valid;
@@ -35,10 +37,13 @@ public class InvoiceController {
 
     private final InvoiceService invoiceService;
     private final InvoicePdfService invoicePdfService;
+    private final ERechnungService eRechnungService;
 
-    public InvoiceController(InvoiceService invoiceService, InvoicePdfService invoicePdfService) {
+    public InvoiceController(InvoiceService invoiceService, InvoicePdfService invoicePdfService,
+                             ERechnungService eRechnungService) {
         this.invoiceService = invoiceService;
         this.invoicePdfService = invoicePdfService;
+        this.eRechnungService = eRechnungService;
     }
 
     @GetMapping
@@ -77,6 +82,24 @@ public class InvoiceController {
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         ContentDisposition.inline().filename(pdf.filename()).build().toString())
                 .body(pdf.content());
+    }
+
+    @GetMapping("/{id}/xrechnung")
+    public ResponseEntity<byte[]> xrechnung(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        return download(eRechnungService.xrechnung(CurrentUser.from(jwt), id));
+    }
+
+    @GetMapping("/{id}/zugferd")
+    public ResponseEntity<byte[]> zugferd(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        return download(eRechnungService.zugferd(CurrentUser.from(jwt), id));
+    }
+
+    private static ResponseEntity<byte[]> download(GeneratedFile file) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(file.contentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment().filename(file.filename()).build().toString())
+                .body(file.content());
     }
 
     @PostMapping("/{id}/issue")

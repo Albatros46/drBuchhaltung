@@ -8,7 +8,11 @@ public class InvoiceValidationException extends RuntimeException {
     private final List<String> errors;
 
     public InvoiceValidationException(List<String> errors) {
-        super("Pflichtangaben fehlen (§14 UStG)");
+        this("Pflichtangaben fehlen (§14 UStG)", errors);
+    }
+
+    public InvoiceValidationException(String message, List<String> errors) {
+        super(message);
         this.errors = List.copyOf(errors);
     }
 
