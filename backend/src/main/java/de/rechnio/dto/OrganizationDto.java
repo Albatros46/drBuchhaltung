@@ -18,12 +18,15 @@ public record OrganizationDto(
         String iban,
         String bic,
         String email,
+        String contactName,
+        String phone,
         Integer datevBeraterNr,
         Integer datevMandantNr) {
 
     public static OrganizationDto from(Organization o) {
         return new OrganizationDto(o.getName(), o.getStreet(), o.getZip(), o.getCity(), o.getCountry(),
                 o.getSteuernummer(), o.getUstId(), o.isKleinunternehmer(), o.getKontenrahmen(),
-                o.getIban(), o.getBic(), o.getEmail(), o.getDatevBeraterNr(), o.getDatevMandantNr());
+                o.getIban(), o.getBic(), o.getEmail(), o.getContactName(), o.getPhone(),
+                o.getDatevBeraterNr(), o.getDatevMandantNr());
     }
 }

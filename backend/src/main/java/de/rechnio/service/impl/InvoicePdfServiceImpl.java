@@ -144,6 +144,7 @@ public class InvoicePdfServiceImpl implements InvoicePdfService {
         rows.add(join(" · ",
                 org.getSteuernummer() == null ? null : "Steuernummer " + org.getSteuernummer(),
                 org.getUstId() == null ? null : "USt-IdNr. " + org.getUstId(),
+                org.getPhone() == null ? null : "Tel. " + org.getPhone(),
                 org.getEmail()));
         rows.add(join(" · ",
                 org.getIban() == null ? null : "IBAN " + org.getIban(),

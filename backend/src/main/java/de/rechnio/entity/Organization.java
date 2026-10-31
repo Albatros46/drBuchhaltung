@@ -29,6 +29,8 @@ public class Organization {
     private String iban;
     private String bic;
     private String email;
+    private String contactName;
+    private String phone;
     private Integer datevBeraterNr;
     private Integer datevMandantNr;
     private Instant createdAt;
@@ -67,6 +69,10 @@ public class Organization {
     public void setBic(String bic) { this.bic = bic; }
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+    public String getContactName() { return contactName; }
+    public void setContactName(String contactName) { this.contactName = contactName; }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
     public Integer getDatevBeraterNr() { return datevBeraterNr; }
     public void setDatevBeraterNr(Integer datevBeraterNr) { this.datevBeraterNr = datevBeraterNr; }
     public Integer getDatevMandantNr() { return datevMandantNr; }

@@ -28,6 +28,8 @@ export interface Organization {
   iban?: string | null;
   bic?: string | null;
   email?: string | null;
+  contactName?: string | null;
+  phone?: string | null;
   datevBeraterNr?: number | null;
   datevMandantNr?: number | null;
 }

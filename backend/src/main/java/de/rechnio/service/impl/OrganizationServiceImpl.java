@@ -42,6 +42,8 @@ public class OrganizationServiceImpl implements OrganizationService {
         o.setIban(dto.iban());
         o.setBic(dto.bic());
         o.setEmail(dto.email());
+        o.setContactName(dto.contactName());
+        o.setPhone(dto.phone());
         o.setDatevBeraterNr(dto.datevBeraterNr());
         o.setDatevMandantNr(dto.datevMandantNr());
         return OrganizationDto.from(o);

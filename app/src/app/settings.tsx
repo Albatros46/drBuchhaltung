@@ -94,6 +94,18 @@ export default function SettingsScreen() {
 
       <Card>
         <CardHeader>
+          <CardTitle>Kontakt</CardTitle>
+          <CardDescription>Pflicht für XRechnung: Ansprechpartner, Telefon und E-Mail.</CardDescription>
+        </CardHeader>
+        <CardContent className="gap-3">
+          <Field label="Ansprechpartner" value={text(org.contactName)} onChangeText={set('contactName')} />
+          <Field label="Telefon" value={text(org.phone)} onChangeText={set('phone')} keyboardType="phone-pad" />
+          <Field label="E-Mail" value={text(org.email)} onChangeText={set('email')} autoCapitalize="none" keyboardType="email-address" />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Bank</CardTitle>
         </CardHeader>
         <CardContent className="gap-3">
