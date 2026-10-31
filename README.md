@@ -6,8 +6,11 @@ Ein Spring-Boot-Backend und eine Expo-App (iOS, Android und Web aus einem Code).
 ```
 Rechnio/
 ├─ backend/   Spring Boot 3.5 · Java 21 · H2 (lokal) / PostgreSQL (Produktion) · JWT
-└─ app/       Expo SDK 58 · Expo Router · TypeScript
+└─ app/       Expo SDK 58 · Expo Router · TypeScript · NativeWind 4 · React Native Reusables
 ```
+
+UI-Bausteine liegen in `app/src/components/ui/` (React Native Reusables, per CLI hinzugefügt).
+Weitere Komponenten: `npx @react-native-reusables/cli@latest add <name>` im Ordner `app/`.
 
 ## Lokal starten
 
