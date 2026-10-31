@@ -119,6 +119,7 @@ class InvoiceFlowIntegrationTest {
                 .andExpect(header().string("Content-Disposition", containsString("Rechnung-RE-" + year + "-0001.pdf")))
                 .andReturn().getResponse().getContentAsByteArray();
         assertThat(new String(pdf, 0, 5, java.nio.charset.StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
+        assertPdfA3WithEmbeddedFonts(pdf);
 
         String text = pdfText(pdf);
         assertThat(text)
@@ -129,6 +130,21 @@ class InvoiceFlowIntegrationTest {
                 .contains("zzgl. 19 % USt auf 725,00 €")
                 .contains("862,75 €")
                 .doesNotContain("ENTWURF");
+    }
+
+    /** PDF/A-3-Kennung in den XMP-Metadaten und alle Schriften eingebettet (Voraussetzung fuer ZUGFeRD). */
+    private static void assertPdfA3WithEmbeddedFonts(byte[] pdf) throws Exception {
+        try (var doc = org.apache.pdfbox.Loader.loadPDF(pdf)) {
+            var meta = doc.getDocumentCatalog().getMetadata();
+            assertThat(meta).as("XMP-Metadaten").isNotNull();
+            String xmp = new String(meta.toByteArray(), java.nio.charset.StandardCharsets.UTF_8);
+            assertThat(xmp).containsPattern("pdfaid:part(>|=\")3");
+            for (var page : doc.getPages()) {
+                for (var name : page.getResources().getFontNames()) {
+                    assertThat(page.getResources().getFont(name).isEmbedded()).as("Schrift %s eingebettet", name).isTrue();
+                }
+            }
+        }
     }
 
     private static String pdfText(byte[] pdf) throws Exception {

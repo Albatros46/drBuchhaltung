@@ -19,7 +19,40 @@
     <properties>
         <java.version>21</java.version>
         <openhtmltopdf.version>1.1.97</openhtmltopdf.version>
+        <mustang.version>2.26.0</mustang.version>
+        <pdfbox.version>3.0.8</pdfbox.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- OpenHTMLtoPDF und Mustang muessen dieselbe PDFBox-Version verwenden -->
+            <dependency>
+                <groupId>org.apache.pdfbox</groupId>
+                <artifactId>pdfbox</artifactId>
+                <version>${pdfbox.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.pdfbox</groupId>
+                <artifactId>pdfbox-io</artifactId>
+                <version>${pdfbox.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.pdfbox</groupId>
+                <artifactId>fontbox</artifactId>
+                <version>${pdfbox.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.pdfbox</groupId>
+                <artifactId>xmpbox</artifactId>
+                <version>${pdfbox.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.pdfbox</groupId>
+                <artifactId>preflight</artifactId>
+                <version>${pdfbox.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <dependency>
@@ -43,6 +76,12 @@
             <groupId>io.github.openhtmltopdf</groupId>
             <artifactId>openhtmltopdf-pdfbox</artifactId>
             <version>${openhtmltopdf.version}</version>
+        </dependency>
+        <!-- E-Rechnung: XRechnung (CII) und ZUGFeRD (PDF/A-3 mit eingebettetem XML) -->
+        <dependency>
+            <groupId>org.mustangproject</groupId>
+            <artifactId>library</artifactId>
+            <version>${mustang.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -79,6 +118,13 @@
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Prueft erzeugte E-Rechnungen gegen EN 16931 / XRechnung-Schematron und PDF/A -->
+        <dependency>
+            <groupId>org.mustangproject</groupId>
+            <artifactId>validator</artifactId>
+            <version>${mustang.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

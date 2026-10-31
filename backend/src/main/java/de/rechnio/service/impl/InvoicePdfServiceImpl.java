@@ -1,7 +1,10 @@
 package de.rechnio.service.impl;
 
+import java.awt.color.ColorSpace;
+import java.awt.color.ICC_Profile;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.LocalDate;
@@ -16,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
+import com.openhtmltopdf.outputdevice.helper.BaseRendererBuilder.FontStyle;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 
 import de.rechnio.config.CurrentUser;
@@ -37,6 +41,8 @@ import de.rechnio.util.VatCalculator;
 public class InvoicePdfServiceImpl implements InvoicePdfService {
 
     private static final Locale DE = Locale.GERMANY;
+    /** Muss mit font-family in templates/pdf/invoice.xhtml uebereinstimmen. */
+    private static final String FONT_FAMILY = "Rechnio Sans";
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
     private final InvoiceRepository invoices;
@@ -146,10 +152,18 @@ public class InvoicePdfServiceImpl implements InvoicePdfService {
         return rows;
     }
 
+    /**
+     * Rendert als PDF/A-3b: Schriften eingebettet, sRGB-Farbprofil. PDF/A-3 ist Voraussetzung,
+     * damit ZUGFeRD die Rechnungsdaten als XML in dieselbe Datei einbetten kann.
+     */
     private static byte[] toPdf(String xhtml) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             PdfRendererBuilder builder = new PdfRendererBuilder();
             builder.useFastMode();
+            builder.usePdfAConformance(PdfRendererBuilder.PdfAConformance.PDFA_3_B);
+            builder.useColorProfile(ICC_Profile.getInstance(ColorSpace.CS_sRGB).getData());
+            builder.useFont(() -> font("LiberationSans-Regular.ttf"), FONT_FAMILY, 400, FontStyle.NORMAL, true);
+            builder.useFont(() -> font("LiberationSans-Bold.ttf"), FONT_FAMILY, 700, FontStyle.NORMAL, true);
             builder.withHtmlContent(xhtml, null);
             builder.toStream(out);
             builder.run();
@@ -157,6 +171,12 @@ public class InvoicePdfServiceImpl implements InvoicePdfService {
         } catch (IOException e) {
             throw new IllegalStateException("PDF konnte nicht erzeugt werden", e);
         }
+    }
+
+    private static InputStream font(String file) {
+        InputStream in = InvoicePdfServiceImpl.class.getResourceAsStream("/fonts/" + file);
+        if (in == null) throw new IllegalStateException("Schrift fehlt im Classpath: " + file);
+        return in;
     }
 
     private static String money(BigDecimal v) {
