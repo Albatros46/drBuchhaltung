@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
 import { ActionButton, AmountRow, ErrorBox, Screen, StatusPill } from '@/components/app-ui';
+import { SendMailCard } from '@/components/send-mail-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Text } from '@/components/ui/text';
@@ -115,6 +116,8 @@ export default function InvoiceDetailScreen() {
           run(() => openDocument(token, `/api/invoices/${inv.id}/pdf`, fileName(inv, 'pdf'), 'application/pdf'), () => {})
         }
       />
+
+      {inv.status !== 'DRAFT' && <SendMailCard token={token} inv={inv} onSent={setInv} />}
 
       {inv.docType !== 'ANGEBOT' && inv.status !== 'DRAFT' && (
         <Card>

@@ -19,13 +19,22 @@ export function Screen({ children }: { children: ReactNode }) {
   );
 }
 
-/** Beschriftetes Eingabefeld; id verbindet Label und Input fuer Screenreader. */
-export function Field({ label, nativeID, className, ...props }: TextInputProps & { label: string; className?: string }) {
+/**
+ * Beschriftetes Eingabefeld; id verbindet Label und Input fuer Screenreader.
+ * className gilt fuer den Container (Breite im Layout), inputClassName fuer das Eingabefeld selbst.
+ */
+export function Field({
+  label,
+  nativeID,
+  className,
+  inputClassName,
+  ...props
+}: TextInputProps & { label: string; className?: string; inputClassName?: string }) {
   const id = nativeID ?? label.replace(/\W+/g, '-').toLowerCase();
   return (
     <View className={cn('flex-1 gap-1.5', className)}>
       <Label nativeID={id}>{label}</Label>
-      <Input aria-labelledby={id} accessibilityLabel={label} {...props} />
+      <Input aria-labelledby={id} accessibilityLabel={label} className={inputClassName} {...props} />
     </View>
   );
 }

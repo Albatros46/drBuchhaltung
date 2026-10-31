@@ -72,7 +72,18 @@ export interface Invoice {
   paidAt: string | null;
   locked: boolean;
   legalNote: string | null;
+  sentAt: string | null;
+  sentTo: string | null;
   lines: InvoiceLine[];
+}
+
+export type MailAttachment = 'ZUGFERD' | 'PDF' | 'XRECHNUNG';
+
+export interface InvoiceMail {
+  to: string;
+  subject: string;
+  message: string;
+  attachment: MailAttachment;
 }
 
 export interface LineInput {
@@ -209,6 +220,9 @@ export const api = {
   markPaid: (t: string, id: string) => request<Invoice>(`/api/invoices/${id}/paid`, t, { method: 'POST' }),
   cancel: (t: string, id: string) => request<Invoice>(`/api/invoices/${id}/cancel`, t, { method: 'POST' }),
   deleteDraft: (t: string, id: string) => request<void>(`/api/invoices/${id}`, t, { method: 'DELETE' }),
+  emailDraft: (t: string, id: string) => request<InvoiceMail>(`/api/invoices/${id}/email`, t),
+  sendInvoice: (t: string, id: string, mail: InvoiceMail) =>
+    request<Invoice>(`/api/invoices/${id}/send`, t, { method: 'POST', body: json(mail) }),
 
   incomingInvoices: (t: string) => request<IncomingInvoice[]>('/api/incoming-invoices', t),
   incomingInvoice: (t: string, id: string) => request<IncomingInvoice>(`/api/incoming-invoices/${id}`, t),
