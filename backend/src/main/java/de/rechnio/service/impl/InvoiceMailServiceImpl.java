@@ -1,24 +1,12 @@
 package de.rechnio.service.impl;
 
-import java.io.UnsupportedEncodingException;
-import java.math.BigDecimal;
-import java.text.NumberFormat;
+import static de.rechnio.util.GermanFormat.date;
+import static de.rechnio.util.GermanFormat.money;
+
 import java.time.Clock;
 import java.time.Instant;
-import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.Locale;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.HttpStatus;
-import org.springframework.mail.MailException;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +14,7 @@ import de.rechnio.config.CurrentUser;
 import de.rechnio.dto.GeneratedFile;
 import de.rechnio.dto.InvoiceMailRequest;
 import de.rechnio.dto.InvoiceResponse;
+import de.rechnio.dto.OutgoingMail;
 import de.rechnio.dto.PdfDocument;
 import de.rechnio.entity.AuditLog;
 import de.rechnio.entity.Customer;
@@ -42,41 +31,32 @@ import de.rechnio.repository.OrganizationRepository;
 import de.rechnio.service.ERechnungService;
 import de.rechnio.service.InvoiceMailService;
 import de.rechnio.service.InvoicePdfService;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.AddressException;
-import jakarta.mail.internet.InternetAddress;
-import jakarta.mail.internet.MimeMessage;
+import de.rechnio.service.MailService;
 
 @Service
 public class InvoiceMailServiceImpl implements InvoiceMailService {
-
-    private static final Logger log = LoggerFactory.getLogger(InvoiceMailServiceImpl.class);
-    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
     private final InvoiceRepository invoices;
     private final CustomerRepository customers;
     private final OrganizationRepository organizations;
     private final InvoicePdfService pdfService;
     private final ERechnungService eRechnungService;
+    private final MailService mailService;
     private final AuditLogRepository audit;
-    private final JavaMailSender mailSender;
     private final Clock clock;
-    private final String from;
 
     public InvoiceMailServiceImpl(InvoiceRepository invoices, CustomerRepository customers,
                                   OrganizationRepository organizations, InvoicePdfService pdfService,
-                                  ERechnungService eRechnungService, AuditLogRepository audit,
-                                  JavaMailSender mailSender, Clock clock,
-                                  @Value("${rechnio.mail.from:rechnung@rechnio.local}") String from) {
+                                  ERechnungService eRechnungService, MailService mailService,
+                                  AuditLogRepository audit, Clock clock) {
         this.invoices = invoices;
         this.customers = customers;
         this.organizations = organizations;
         this.pdfService = pdfService;
         this.eRechnungService = eRechnungService;
+        this.mailService = mailService;
         this.audit = audit;
-        this.mailSender = mailSender;
         this.clock = clock;
-        this.from = from;
     }
 
     private record Context(Invoice invoice, Organization org, Customer customer, Invoice cancelled) {
@@ -102,28 +82,13 @@ public class InvoiceMailServiceImpl implements InvoiceMailService {
         if (inv.getDocType() == DocType.ANGEBOT && req.attachment() != MailAttachment.PDF) {
             throw ApiException.badRequest("Angebote werden als PDF verschickt");
         }
-        InternetAddress[] recipients = recipients(req.to());
+        mailService.normalizeRecipients(req.to());
 
         // Anhang zuerst erzeugen: fehlen Angaben fuer die E-Rechnung, wird nichts verschickt (HTTP 422)
         GeneratedFile file = attachment(user, inv, req.attachment());
+        String sentTo = mailService.send(new OutgoingMail(c.org().getName(), c.org().getEmail(), req.to(),
+                req.subject(), req.message(), file));
 
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(new InternetAddress(from, c.org().getName(), "UTF-8"));
-            if (!blank(c.org().getEmail())) helper.setReplyTo(c.org().getEmail());
-            helper.setTo(recipients);
-            helper.setSubject(req.subject().trim());
-            helper.setText(req.message());
-            helper.addAttachment(file.filename(), new ByteArrayResource(file.content()), file.contentType());
-            mailSender.send(message);
-        } catch (MailException | MessagingException | UnsupportedEncodingException e) {
-            log.warn("Versand von {} fehlgeschlagen", inv.getNumber(), e);
-            throw new ApiException(HttpStatus.BAD_GATEWAY,
-                    "E-Mail konnte nicht gesendet werden. Ist der Mailserver erreichbar? (" + rootMessage(e) + ")");
-        }
-
-        String sentTo = Arrays.stream(recipients).map(InternetAddress::getAddress).collect(Collectors.joining(", "));
         inv.markSent(sentTo, Instant.now(clock));
         audit.save(new AuditLog(user.organizationId(), "INVOICE", inv.getId(), "SENT",
                 req.attachment() + " an " + sentTo, user.email()));
@@ -156,17 +121,6 @@ public class InvoiceMailServiceImpl implements InvoiceMailService {
         return new Context(inv, org, customer, cancelled);
     }
 
-    static InternetAddress[] recipients(String to) {
-        try {
-            InternetAddress[] parsed = InternetAddress.parse(to.replace(';', ','), true);
-            if (parsed.length == 0) throw new AddressException("leer");
-            for (InternetAddress a : parsed) a.validate();
-            return parsed;
-        } catch (AddressException e) {
-            throw ApiException.badRequest("Ungültige E-Mail-Adresse: " + to);
-        }
-    }
-
     private static String subject(Context c) {
         Invoice inv = c.invoice();
         String doc = switch (inv.getDocType()) {
@@ -190,31 +144,30 @@ public class InvoiceMailServiceImpl implements InvoiceMailService {
                     .append(" über ").append(money(inv.getGrossTotal().abs())).append(".\n");
             case RECHNUNG -> {
                 sb.append("anbei erhalten Sie unsere Rechnung ").append(inv.getNumber());
-                if (inv.getIssueDate() != null) sb.append(" vom ").append(DATE.format(inv.getIssueDate()));
+                if (inv.getIssueDate() != null) sb.append(" vom ").append(date(inv.getIssueDate()));
                 sb.append(" über ").append(money(inv.getGrossTotal())).append(".\n");
                 if (inv.getDueDate() != null) {
-                    sb.append("Bitte überweisen Sie den Betrag bis zum ").append(DATE.format(inv.getDueDate()));
-                    sb.append(blank(org.getIban()) ? ".\n" : " auf folgendes Konto:\nIBAN " + org.getIban()
-                            + (blank(org.getBic()) ? "" : ", BIC " + org.getBic()) + "\n");
-                    sb.append("Verwendungszweck: ").append(inv.getNumber()).append("\n");
+                    sb.append("Bitte überweisen Sie den Betrag bis zum ").append(date(inv.getDueDate()));
+                    sb.append(paymentAccount(org)).append("Verwendungszweck: ").append(inv.getNumber()).append("\n");
                 }
             }
         }
-        sb.append("\nMit freundlichen Grüßen\n");
+        return sb.append(signature(org)).toString();
+    }
+
+    /** " auf folgendes Konto:\nIBAN …, BIC …\n" oder ".\n" ohne IBAN. */
+    static String paymentAccount(Organization org) {
+        if (blank(org.getIban())) return ".\n";
+        return " auf folgendes Konto:\nIBAN " + org.getIban() + (blank(org.getBic()) ? "" : ", BIC " + org.getBic()) + "\n";
+    }
+
+    /** Grussformel mit Ansprechpartner, Firma und Telefon. */
+    static String signature(Organization org) {
+        StringBuilder sb = new StringBuilder("\nMit freundlichen Grüßen\n");
         if (!blank(org.getContactName())) sb.append(org.getContactName()).append("\n");
         sb.append(org.getName());
         if (!blank(org.getPhone())) sb.append("\nTel. ").append(org.getPhone());
         return sb.toString();
-    }
-
-    private static String money(BigDecimal v) {
-        return NumberFormat.getCurrencyInstance(Locale.GERMANY).format(v);
-    }
-
-    private static String rootMessage(Throwable e) {
-        Throwable t = e;
-        while (t.getCause() != null && t.getCause() != t) t = t.getCause();
-        return t.getMessage() == null ? t.getClass().getSimpleName() : t.getMessage();
     }
 
     private static boolean blank(String s) {

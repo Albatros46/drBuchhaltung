@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Gemeinsame Bausteine fuer alle Belege (Rechnung, Mahnung), eingebunden per th:replace. -->
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+<style th:fragment="style">
+  /* DIN 5008 Form B: Anschriftfeld 45 mm von oben, 20 mm von links, 85 x 45 mm. */
+  @page {
+    size: A4;
+    margin: 20mm 20mm 32mm 25mm;
+    @bottom-center { content: element(footer); }
+    @top-right { content: "Seite " counter(page) " von " counter(pages); font-family: 'Rechnio Sans'; font-size: 7.5pt; color: #5b6678; }
+  }
+  body { font-family: 'Rechnio Sans'; font-size: 9.5pt; color: #16233b; line-height: 1.35; }
+  .letterhead { height: 25mm; }
+  .letterhead .name { font-size: 16pt; font-weight: bold; }
+  .letterhead .addr { color: #5b6678; }
+  .window { position: absolute; top: 25mm; left: 0; width: 85mm; height: 45mm; }
+  .sender-line { font-size: 7pt; color: #5b6678; border-bottom: 0.3pt solid #c9d0da; padding-bottom: 1mm; margin-bottom: 3mm; }
+  .info { position: absolute; top: 25mm; right: 0; width: 70mm; }
+  .info table { width: 100%; border-collapse: collapse; }
+  .info td { padding: 0.6mm 0; vertical-align: top; }
+  .info td.k { color: #5b6678; width: 32mm; }
+  .content { margin-top: 52mm; }
+  h1 { font-size: 14pt; margin: 0 0 4mm 0; }
+  .draft { color: #b3261e; font-size: 10pt; font-weight: bold; letter-spacing: 1pt; margin-bottom: 2mm; }
+  table.items { width: 100%; border-collapse: collapse; margin-top: 4mm; }
+  table.items th { text-align: left; font-size: 8pt; color: #5b6678; font-weight: normal; border-bottom: 0.8pt solid #16233b; padding: 1.5mm 1.5mm; }
+  table.items td { border-bottom: 0.3pt solid #c9d0da; padding: 1.8mm 1.5mm; vertical-align: top; }
+  table.items tr { page-break-inside: avoid; }
+  .r { text-align: right; }
+  table.totals { width: 85mm; margin-left: auto; margin-top: 3mm; border-collapse: collapse; }
+  table.totals td { padding: 0.8mm 1.5mm; }
+  table.totals tr.gross td { font-weight: bold; font-size: 10.5pt; border-top: 0.8pt solid #16233b; padding-top: 1.5mm; }
+  .note { margin-top: 5mm; }
+  .footer { position: running(footer); font-size: 7pt; color: #5b6678; border-top: 0.3pt solid #c9d0da; padding-top: 2mm; text-align: center; }
+</style>
+</head>
+<body>
+
+<!-- Fusszeile, Briefkopf und Anschriftfeld; Parameter: de.rechnio.util.Letterhead -->
+<th:block th:fragment="briefkopf(letter)">
+  <div class="footer">
+    <div th:each="row : ${letter.footer}" th:text="${row}">Firma · Straße · Ort</div>
+  </div>
+
+  <div class="letterhead">
+    <div class="name" th:text="${letter.senderName}">Firma</div>
+    <div class="addr" th:text="${letter.senderLine}">Straße · PLZ Ort</div>
+  </div>
+
+  <div class="window">
+    <div class="sender-line" th:text="${letter.senderLine}">Absender</div>
+    <div th:text="${letter.recipient.name}">Kunde</div>
+    <div th:if="${letter.recipient.street}" th:text="${letter.recipient.street}">Straße</div>
+    <div th:if="${letter.recipient.zipCity}" th:text="${letter.recipient.zipCity}">PLZ Ort</div>
+  </div>
+</th:block>
+
+</body>
+</html>
