@@ -109,6 +109,26 @@ Jede Datei wird beim Upload geprüft (XSD, Schematron, PDF/A); formal fehlerhaft
 trotzdem gespeichert und mit den Befunden markiert. Die Originaldatei bleibt unverändert erhalten (GoBD),
 doppelte Uploads werden über SHA-256 erkannt. Normale PDFs ohne eingebettetes XML werden abgelehnt.
 
+## Versand per E-Mail
+
+`GET /api/invoices/{id}/email` liefert einen Vorschlag (Empfänger, Betreff, Text, Anhang),
+`POST /api/invoices/{id}/send` verschickt den Beleg und vermerkt Zeitpunkt und Empfänger.
+Anhang: ZUGFeRD-PDF (Standard), PDF oder XRechnung (Standard, wenn der Kunde eine Leitweg-ID hat).
+Angebote gehen immer als PDF. Fehlen Angaben für die E-Rechnung, wird nichts verschickt (HTTP 422).
+
+**Lokal testen:** Ohne Konfiguration sendet das Backend an `localhost:1025`. Dort ein Test-Postfach starten,
+z. B. [Mailpit](https://mailpit.axllent.org/) (`mailpit.exe` oder `docker run -p 8025:8025 -p 1025:1025 axllent/mailpit`),
+und die Mails unter http://localhost:8025 ansehen. Es wird nichts an echte Empfänger zugestellt.
+
+**Echter Versand** über einen SMTP-Anbieter per Umgebungsvariablen:
+
+| Variable | Beispiel |
+|---|---|
+| `MAIL_HOST`, `MAIL_PORT` | `smtp.example.de`, `587` |
+| `MAIL_USERNAME`, `MAIL_PASSWORD` | Zugangsdaten des Postfachs |
+| `MAIL_AUTH`, `MAIL_STARTTLS` | `true`, `true` |
+| `MAIL_FROM` | Absender, den der Anbieter erlaubt (die Firmen-E-Mail wird als Reply-To gesetzt) |
+
 ## Tests
 
 ```bash
@@ -122,7 +142,7 @@ mvn test
 - Aufwandskonto je Eingangsrechnung wählbar; § 13b bei Eingangsrechnungen
 - DATEV-Stammdatenexport (Debitoren/Kreditoren)
 - E-Rechnungen per E-Mail empfangen (Postfach-Abruf)
-- Versand per E-Mail, Mahnungen
+- Mahnungen
 - Belege scannen (OCR)
 
 ## Produktion (später)
