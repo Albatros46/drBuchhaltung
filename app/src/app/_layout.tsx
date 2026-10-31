@@ -1,3 +1,6 @@
+import '../../global.css';
+
+import { PortalHost } from '@rn-primitives/portal';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
@@ -21,6 +24,7 @@ export default function RootLayout() {
         <Stack.Screen name="customers" options={{ title: 'Kunden' }} />
         <Stack.Screen name="settings" options={{ title: 'Firma' }} />
       </Stack>
+      <PortalHost />
     </AuthProvider>
   );
 }
