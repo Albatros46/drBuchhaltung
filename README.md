@@ -82,7 +82,15 @@ de.rechnio
 - Lückenlose Nummernkreise je Jahr und Belegart: `RE-2026-0001`, `AN-…`, `ST-…`.
 - Ausgestellte Belege sind unveränderlich; Korrekturen nur per Storno (GoBD). Änderungen stehen im `audit_log`.
 - § 19 (Kleinunternehmer) und § 13b (Reverse-Charge) setzen den Steuersatz auf 0 % und liefern den Pflichthinweis.
-- DATEV-Export: Debitor `10000 + Kundennummer` an Erlös-Automatikkonto (SKR03 8400/8300, SKR04 4400/4300).
+- DATEV-Export (ein Buchungsstapel für Rechnungsausgang und -eingang, je Steuersatz eine Buchung):
+  - Ausgang: Debitor `10000 + Kundennummer` (Soll) an Erlös-Automatikkonto (SKR03 8400/8300, SKR04 4400/4300).
+  - Eingang: Kreditor `70000 + Lieferantennummer` (Haben) an Wareneingang (SKR03 3400/3300/3200,
+    SKR04 5400/5300/5200); Gutschriften der Lieferanten im Soll. Lieferanten werden über USt-IdNr.,
+    Steuernummer oder Namen wiedererkannt und behalten ihre Nummer.
+  - Wareneingang ist ein Vorschlag: Dienstleistungen, Miete o. Ä. kontiert der Steuerberater um.
+    Eingehende Reverse-Charge-Rechnungen (§ 13b) werden noch nicht gesondert gebucht.
+  - Kreditoren- und Debitoren-Stammdaten werden nicht mitexportiert; DATEV legt fehlende Personenkonten
+    beim Import an oder der Steuerberater ergänzt sie.
   **Vor dem produktiven Einsatz einmal mit dem Steuerberater probeweise in DATEV importieren.**
 
 ## E-Rechnung
@@ -111,7 +119,8 @@ mvn test
 ## Noch offen
 
 - Logo im PDF-Briefkopf
-- Eingangsrechnungen im DATEV-Export (Kreditoren)
+- Aufwandskonto je Eingangsrechnung wählbar; § 13b bei Eingangsrechnungen
+- DATEV-Stammdatenexport (Debitoren/Kreditoren)
 - E-Rechnungen per E-Mail empfangen (Postfach-Abruf)
 - Versand per E-Mail, Mahnungen
 - Belege scannen (OCR)
