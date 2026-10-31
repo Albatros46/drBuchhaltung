@@ -63,6 +63,7 @@ de.rechnio
 | GET/PUT | `/api/organization` | Firmenstammdaten |
 | GET/POST/PUT | `/api/customers` | Kunden |
 | GET/POST/PUT/DELETE | `/api/invoices` | Entwürfe von Rechnungen und Angeboten |
+| GET | `/api/invoices/{id}/pdf` | Beleg als PDF (DIN 5008; Entwürfe als ENTWURF markiert) |
 | POST | `/api/invoices/{id}/issue` | Ausstellen: Nummer vergeben, festschreiben |
 | POST | `/api/invoices/{id}/paid` | Als bezahlt markieren |
 | POST | `/api/invoices/{id}/cancel` | Stornorechnung erzeugen |
@@ -87,7 +88,8 @@ mvn test
 
 ## Noch offen
 
-- PDF-Ausgabe der Rechnung und E-Rechnung (XRechnung / ZUGFeRD)
+- E-Rechnung (XRechnung / ZUGFeRD; das PDF ist dafür noch nicht PDF/A-3)
+- Logo im PDF-Briefkopf
 - Versand per E-Mail, Mahnungen
 - Belege scannen (OCR)
 
