@@ -83,6 +83,13 @@
             <artifactId>library</artifactId>
             <version>${mustang.version}</version>
         </dependency>
+        <!-- Prueft E-Rechnungen gegen EN 16931 / XRechnung-Schematron und PDF/A:
+             eingehende Rechnungen beim Upload, erzeugte Rechnungen in den Tests -->
+        <dependency>
+            <groupId>org.mustangproject</groupId>
+            <artifactId>validator</artifactId>
+            <version>${mustang.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
@@ -118,13 +125,6 @@
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <!-- Prueft erzeugte E-Rechnungen gegen EN 16931 / XRechnung-Schematron und PDF/A -->
-        <dependency>
-            <groupId>org.mustangproject</groupId>
-            <artifactId>validator</artifactId>
-            <version>${mustang.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
