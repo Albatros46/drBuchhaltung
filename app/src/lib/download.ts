@@ -3,7 +3,11 @@ import * as Sharing from 'expo-sharing';
 
 import { ApiError, fetchFile } from './api';
 
-const UTI: Record<string, string> = { 'application/pdf': 'com.adobe.pdf', 'application/xml': 'public.xml' };
+const UTI: Record<string, string> = {
+  'application/pdf': 'com.adobe.pdf',
+  'application/xml': 'public.xml',
+  'text/csv': 'public.comma-separated-values-text',
+};
 
 /**
  * iOS/Android: Datei in den Cache schreiben und das Teilen-Menue oeffnen

@@ -6,8 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Text } from '@/components/ui/text';
-import { api, API_URL, ApiError, Organization } from '@/lib/api';
+import { api, ApiError, Organization } from '@/lib/api';
 import { useToken } from '@/lib/auth';
+import { openDocument } from '@/lib/download';
 
 const text = (v: string | null | undefined) => v ?? '';
 const orNull = (v: string) => (v.trim() ? v.trim() : null);
@@ -22,6 +23,21 @@ export default function SettingsScreen() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const year = new Date().getFullYear();
+  const [exportYear, setExportYear] = useState(year);
+
+  const downloadDatev = async () => {
+    setError(null);
+    try {
+      await openDocument(
+        token,
+        `/api/exports/datev?from=${exportYear}-01-01&to=${exportYear}-12-31`,
+        `EXTF_Buchungsstapel_${exportYear}.csv`,
+        'text/csv',
+      );
+    } catch (e) {
+      setError(e as ApiError);
+    }
+  };
 
   useEffect(() => {
     api
@@ -129,9 +145,29 @@ export default function SettingsScreen() {
             <Field label="Beraternummer" value={berater} onChangeText={setBerater} keyboardType="number-pad" />
             <Field label="Mandantennummer" value={mandant} onChangeText={setMandant} keyboardType="number-pad" />
           </View>
-          <Text variant="muted" selectable>
-            Export für {year}: GET {API_URL}/api/exports/datev?from={year}-01-01&to={year}-12-31
-          </Text>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>DATEV-Export</CardTitle>
+          <CardDescription>
+            Buchungsstapel mit Ausgangs- und Eingangsrechnungen für Ihren Steuerberater. Vorher speichern, damit
+            Kontenrahmen und Nummern im Export stehen.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="gap-3">
+          <View className="flex-row gap-2">
+            {[year - 1, year].map((y) => (
+              <Chip key={y} label={String(y)} active={exportYear === y} onPress={() => setExportYear(y)} />
+            ))}
+          </View>
+          <ActionButton
+            title={`Buchungsstapel ${exportYear} herunterladen`}
+            variant="outline"
+            disabled={busy}
+            onPress={downloadDatev}
+          />
         </CardContent>
       </Card>
 

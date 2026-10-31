@@ -73,6 +73,7 @@ export default function IncomingInvoiceScreen() {
           <Info label="IBAN" value={inv.supplierIban} selectable />
           <Info label="Ihre Referenz" value={inv.buyerReference} />
           <Info label="Format" value={formatLabel[inv.format]} />
+          <Info label="DATEV-Kreditor" value={inv.kreditorAccount != null ? String(inv.kreditorAccount) : null} />
           {inv.paymentTerms ? <Text variant="muted" className="mt-2">{inv.paymentTerms}</Text> : null}
         </CardContent>
       </Card>

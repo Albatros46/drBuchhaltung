@@ -118,6 +118,8 @@ export interface IncomingInvoice {
   originalFilename: string;
   paidAt: string | null;
   receivedAt: string;
+  /** DATEV-Kreditorenkonto des Lieferanten (70000 + Lieferantennummer) */
+  kreditorAccount: number | null;
   lines: {
     position: number;
     description: string | null;
