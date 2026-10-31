@@ -1,14 +1,17 @@
-import { Link, Redirect, useFocusEffect, useRouter } from 'expo-router';
+import { Link, useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 
-import { Button, Card, colors, ErrorBox, Muted, Row, Screen, StatusPill } from '@/components/ui';
+import { ActionButton, ErrorBox, Screen, StatusPill } from '@/components/app-ui';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Text } from '@/components/ui/text';
 import { api, ApiError, Customer, Invoice } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { date, money } from '@/lib/format';
 
 export default function OverviewScreen() {
-  const { session, loading, signOut } = useAuth();
+  const { session, signOut } = useAuth();
   const router = useRouter();
   const [invoices, setInvoices] = useState<Invoice[] | null>(null);
   const [customers, setCustomers] = useState<Record<string, Customer>>({});
@@ -30,8 +33,8 @@ export default function OverviewScreen() {
     }, [session, signOut]),
   );
 
-  if (loading) return <ActivityIndicator style={{ marginTop: 40 }} />;
-  if (!session) return <Redirect href="/login" />;
+  // Stack.Protected im Root-Layout zeigt diesen Bildschirm nur mit Sitzung.
+  if (!session) return null;
 
   const realInvoices = (invoices ?? []).filter((i) => i.docType !== 'ANGEBOT' && i.status !== 'DRAFT');
   const open = realInvoices.filter((i) => i.status === 'ISSUED');
@@ -40,78 +43,83 @@ export default function OverviewScreen() {
 
   return (
     <Screen>
-      <Row>
+      <View className="flex-row items-center justify-between">
         <View>
-          <Text style={styles.company}>{session.companyName}</Text>
-          <Muted>{session.email}</Muted>
+          <Text variant="large">{session.companyName}</Text>
+          <Text variant="muted">{session.email}</Text>
         </View>
-        <Pressable onPress={signOut}>
-          <Text style={styles.link}>Abmelden</Text>
-        </Pressable>
-      </Row>
+        <Button variant="ghost" size="sm" onPress={signOut}>
+          <Text>Abmelden</Text>
+        </Button>
+      </View>
 
-      <View style={styles.kpis}>
-        <Card style={styles.kpi}>
-          <Muted>Umsatz netto</Muted>
-          <Text style={styles.kpiValue}>{money(revenue)}</Text>
+      <View className="flex-row gap-3">
+        <Card className="flex-1 gap-1 py-4">
+          <CardContent className="gap-1">
+            <Text variant="muted">Umsatz netto</Text>
+            <Text className="text-xl font-bold tabular-nums">{money(revenue)}</Text>
+          </CardContent>
         </Card>
-        <Card style={styles.kpi}>
-          <Muted>Offen</Muted>
-          <Text style={styles.kpiValue}>{money(open.reduce((s, i) => s + i.grossTotal, 0))}</Text>
+        <Card className="flex-1 gap-1 py-4">
+          <CardContent className="gap-1">
+            <Text variant="muted">Offen</Text>
+            <Text className="text-xl font-bold tabular-nums">
+              {money(open.reduce((s, i) => s + i.grossTotal, 0))}
+            </Text>
+          </CardContent>
         </Card>
       </View>
 
       {overdue.length > 0 && (
-        <Card style={{ borderColor: colors.danger }}>
-          <Text style={{ color: colors.danger, fontWeight: '700' }}>
-            {overdue.length} Rechnung(en) überfällig
-          </Text>
-        </Card>
+        <View className="rounded-md border border-destructive bg-destructive/10 p-3">
+          <Text className="font-semibold text-destructive">{overdue.length} Rechnung(en) überfällig</Text>
+        </View>
       )}
 
-      <Button title="+ Neue Rechnung" onPress={() => router.push('/invoices/new')} />
-      <Row>
-        <Link href="/customers" style={styles.link}>
-          Kunden
+      <ActionButton title="+ Neue Rechnung" onPress={() => router.push('/invoices/new')} />
+      <View className="flex-row justify-between">
+        <Link href="/customers" asChild>
+          <Button variant="link">
+            <Text>Kunden</Text>
+          </Button>
         </Link>
-        <Link href="/settings" style={styles.link}>
-          Firma und Steuer
+        <Link href="/settings" asChild>
+          <Button variant="link">
+            <Text>Firma und Steuer</Text>
+          </Button>
         </Link>
-      </Row>
+      </View>
 
       <ErrorBox message={error} />
       {invoices === null && !error && <ActivityIndicator />}
       {invoices?.length === 0 && (
         <Card>
-          <Muted>Noch keine Belege. Legen Sie zuerst einen Kunden an und erstellen Sie dann Ihre erste Rechnung.</Muted>
+          <CardContent>
+            <Text variant="muted">
+              Noch keine Belege. Legen Sie zuerst einen Kunden an und erstellen Sie dann Ihre erste Rechnung.
+            </Text>
+          </CardContent>
         </Card>
       )}
       {invoices?.map((inv) => (
         <Pressable key={inv.id} onPress={() => router.push(`/invoices/${inv.id}`)}>
-          <Card>
-            <Row>
-              <Text style={styles.number}>{inv.number ?? `Entwurf (${inv.docType.toLowerCase()})`}</Text>
-              <StatusPill status={inv.status} />
-            </Row>
-            <Row>
-              <Text style={styles.ink}>{customers[inv.customerId]?.name ?? '–'}</Text>
-              <Text style={styles.amount}>{money(inv.grossTotal)}</Text>
-            </Row>
-            {inv.issueDate && <Muted>{date(inv.issueDate)}</Muted>}
+          <Card className="py-4">
+            <CardContent className="gap-1">
+              <View className="flex-row items-center justify-between">
+                <Text className="font-semibold">
+                  {inv.number ?? `Entwurf (${inv.docType === 'ANGEBOT' ? 'Angebot' : 'Rechnung'})`}
+                </Text>
+                <StatusPill status={inv.status} />
+              </View>
+              <View className="flex-row items-center justify-between">
+                <Text>{customers[inv.customerId]?.name ?? '–'}</Text>
+                <Text className="tabular-nums">{money(inv.grossTotal)}</Text>
+              </View>
+              {inv.issueDate && <Text variant="muted">{date(inv.issueDate)}</Text>}
+            </CardContent>
           </Card>
         </Pressable>
       ))}
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  company: { fontSize: 20, fontWeight: '700', color: colors.ink },
-  link: { color: colors.accent, fontWeight: '700', paddingVertical: 6 },
-  kpis: { flexDirection: 'row', gap: 12 },
-  kpi: { flex: 1 },
-  kpiValue: { fontSize: 20, fontWeight: '700', color: colors.ink, fontVariant: ['tabular-nums'] },
-  number: { fontWeight: '700', color: colors.ink },
-  ink: { color: colors.ink },
-  amount: { color: colors.ink, fontVariant: ['tabular-nums'] },
-});

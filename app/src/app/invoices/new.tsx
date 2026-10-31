@@ -1,8 +1,12 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { View } from 'react-native';
 
-import { Button, Card, colors, ErrorBox, Field, H2, Muted, Row, Screen } from '@/components/ui';
+import { ActionButton, AmountRow, Chip, ErrorBox, Field, Screen } from '@/components/app-ui';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Text } from '@/components/ui/text';
 import { api, ApiError, Customer, DocType, LineInput } from '@/lib/api';
 import { useToken } from '@/lib/auth';
 import { money, parseDecimal, previewTotals, today } from '@/lib/format';
@@ -77,81 +81,98 @@ export default function NewInvoiceScreen() {
   return (
     <Screen>
       <Card>
-        <H2>Belegart</H2>
-        <Row style={{ justifyContent: 'flex-start' }}>
+        <CardHeader>
+          <CardTitle>Belegart</CardTitle>
+        </CardHeader>
+        <CardContent className="flex-row gap-2">
           {(['RECHNUNG', 'ANGEBOT'] as DocType[]).map((t) => (
-            <Chip key={t} label={t === 'RECHNUNG' ? 'Rechnung' : 'Angebot'} active={docType === t} onPress={() => setDocType(t)} />
+            <Chip
+              key={t}
+              label={t === 'RECHNUNG' ? 'Rechnung' : 'Angebot'}
+              active={docType === t}
+              onPress={() => setDocType(t)}
+            />
           ))}
-        </Row>
+        </CardContent>
       </Card>
 
       <Card>
-        <H2>Kunde</H2>
-        {customers.length === 0 && (
-          <Muted>Noch keine Kunden. Legen Sie unter „Kunden“ zuerst einen an.</Muted>
-        )}
-        <View style={styles.wrap}>
-          {customers.map((c) => (
-            <Chip key={c.id} label={c.name} active={customerId === c.id} onPress={() => setCustomerId(c.id)} />
-          ))}
-        </View>
-        <Field label="Leistungsdatum (JJJJ-MM-TT)" value={serviceDate} onChangeText={setServiceDate} />
-      </Card>
-
-      <Card>
-        <H2>Positionen</H2>
-        {lines.map((l, i) => (
-          <View key={i} style={styles.line}>
-            <Field label={`Pos. ${i + 1} Beschreibung`} value={l.description} onChangeText={(v) => update(i, { description: v })} placeholder="Fliesen verlegen" />
-            <Row>
-              <Field label="Menge" value={l.quantity} onChangeText={(v) => update(i, { quantity: v })} keyboardType="decimal-pad" />
-              <Field label="Einheit" value={l.unit} onChangeText={(v) => update(i, { unit: v })} />
-              <Field label="Einzelpreis €" value={l.unitPrice} onChangeText={(v) => update(i, { unitPrice: v })} keyboardType="decimal-pad" placeholder="85,00" />
-            </Row>
-            <Row>
-              <Row style={{ justifyContent: 'flex-start' }}>
-                {RATES.map((r) => (
-                  <Chip key={r} label={`${r} %`} active={l.vatRate === r} onPress={() => update(i, { vatRate: r })} />
-                ))}
-              </Row>
-              {lines.length > 1 && (
-                <Pressable onPress={() => setLines((prev) => prev.filter((_, idx) => idx !== i))}>
-                  <Text style={{ color: colors.danger }}>Entfernen</Text>
-                </Pressable>
-              )}
-            </Row>
+        <CardHeader>
+          <CardTitle>Kunde</CardTitle>
+        </CardHeader>
+        <CardContent className="gap-3">
+          {customers.length === 0 && (
+            <Text variant="muted">Noch keine Kunden. Legen Sie unter „Kunden“ zuerst einen an.</Text>
+          )}
+          <View className="flex-row flex-wrap gap-2">
+            {customers.map((c) => (
+              <Chip key={c.id} label={c.name} active={customerId === c.id} onPress={() => setCustomerId(c.id)} />
+            ))}
           </View>
-        ))}
-        <Button title="+ Position" variant="ghost" onPress={() => setLines((prev) => [...prev, emptyLine()])} />
+          <Field label="Leistungsdatum (JJJJ-MM-TT)" value={serviceDate} onChangeText={setServiceDate} />
+        </CardContent>
       </Card>
 
       <Card>
-        <Row><Text>Netto</Text><Text style={styles.num}>{money(totals.net)}</Text></Row>
-        <Row><Text>USt</Text><Text style={styles.num}>{money(totals.vat)}</Text></Row>
-        <Row><Text style={styles.total}>Gesamt</Text><Text style={[styles.num, styles.total]}>{money(totals.gross)}</Text></Row>
-        <Muted>Bei Kleinunternehmern (§ 19) und Reverse-Charge berechnet das Backend 0 % USt.</Muted>
+        <CardHeader>
+          <CardTitle>Positionen</CardTitle>
+        </CardHeader>
+        <CardContent className="gap-4">
+          {lines.map((l, i) => (
+            <View key={i} className="gap-3">
+              {i > 0 && <Separator />}
+              <Field
+                label={`Pos. ${i + 1} Beschreibung`}
+                value={l.description}
+                onChangeText={(v) => update(i, { description: v })}
+                placeholder="Fliesen verlegen"
+              />
+              <View className="flex-row gap-2">
+                <Field label="Menge" value={l.quantity} onChangeText={(v) => update(i, { quantity: v })} keyboardType="decimal-pad" />
+                <Field label="Einheit" value={l.unit} onChangeText={(v) => update(i, { unit: v })} />
+                <Field
+                  label="Einzelpreis €"
+                  value={l.unitPrice}
+                  onChangeText={(v) => update(i, { unitPrice: v })}
+                  keyboardType="decimal-pad"
+                  placeholder="85,00"
+                />
+              </View>
+              <View className="flex-row items-center justify-between">
+                <View className="flex-row gap-2">
+                  {RATES.map((r) => (
+                    <Chip key={r} label={`${r} %`} active={l.vatRate === r} onPress={() => update(i, { vatRate: r })} />
+                  ))}
+                </View>
+                {lines.length > 1 && (
+                  <Button variant="ghost" size="sm" onPress={() => setLines((prev) => prev.filter((_, idx) => idx !== i))}>
+                    <Text className="text-destructive">Entfernen</Text>
+                  </Button>
+                )}
+              </View>
+            </View>
+          ))}
+          <ActionButton title="+ Position" variant="outline" onPress={() => setLines((prev) => [...prev, emptyLine()])} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="gap-2">
+          <AmountRow label="Netto" value={money(totals.net)} />
+          <AmountRow label="USt" value={money(totals.vat)} />
+          <Separator />
+          <AmountRow label="Gesamt" value={money(totals.gross)} strong />
+          <Text variant="muted">Bei Kleinunternehmern (§ 19) und Reverse-Charge berechnet das Backend 0 % USt.</Text>
+        </CardContent>
       </Card>
 
       <ErrorBox message={error?.message ?? null} errors={error?.errors} />
-      <Button title={docType === 'RECHNUNG' ? 'Rechnung ausstellen' : 'Angebot ausstellen'} onPress={() => save(true)} busy={busy} />
-      <Button title="Als Entwurf speichern" variant="ghost" onPress={() => save(false)} disabled={busy} />
+      <ActionButton
+        title={docType === 'RECHNUNG' ? 'Rechnung ausstellen' : 'Angebot ausstellen'}
+        onPress={() => save(true)}
+        busy={busy}
+      />
+      <ActionButton title="Als Entwurf speichern" variant="outline" onPress={() => save(false)} disabled={busy} />
     </Screen>
   );
 }
-
-function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  return (
-    <Pressable onPress={onPress} style={[styles.chip, active && styles.chipActive]}>
-      <Text style={{ color: active ? colors.accent : colors.ink, fontWeight: active ? '700' : '400' }}>{label}</Text>
-    </Pressable>
-  );
-}
-
-const styles = StyleSheet.create({
-  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  line: { gap: 8, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: colors.line },
-  chip: { borderWidth: 1, borderColor: colors.line, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
-  chipActive: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
-  num: { fontVariant: ['tabular-nums'], color: colors.ink },
-  total: { fontWeight: '700', fontSize: 16 },
-});

@@ -1,8 +1,11 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
-import { Button, Card, colors, ErrorBox, H2, Muted, Row, Screen, StatusPill } from '@/components/ui';
+import { ActionButton, AmountRow, ErrorBox, Screen, StatusPill } from '@/components/app-ui';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Text } from '@/components/ui/text';
 import { api, ApiError, Invoice } from '@/lib/api';
 import { useToken } from '@/lib/auth';
 import { date, money } from '@/lib/format';
@@ -63,43 +66,46 @@ export default function InvoiceDetailScreen() {
   return (
     <Screen>
       <Card>
-        <Row>
-          <H2>{title}</H2>
-          <StatusPill status={inv.status} />
-        </Row>
-        <Muted>
-          Ausgestellt: {date(inv.issueDate)} · Leistung: {date(inv.serviceDateFrom)} · Fällig: {date(inv.dueDate)}
-        </Muted>
-      </Card>
-
-      <Card>
-        {inv.lines.map((l) => (
-          <Row key={l.position} style={styles.line}>
-            <Text style={styles.desc}>
-              {l.description}
-              {'\n'}
-              <Text style={styles.sub}>
-                {l.quantity} {l.unit} × {money(l.unitPrice)} · {l.vatRate} %
-              </Text>
-            </Text>
-            <Text style={styles.num}>{money(l.netAmount)}</Text>
-          </Row>
-        ))}
-        <Row><Text>Netto</Text><Text style={styles.num}>{money(inv.netTotal)}</Text></Row>
-        <Row><Text>USt</Text><Text style={styles.num}>{money(inv.vatTotal)}</Text></Row>
-        <Row><Text style={styles.total}>Gesamt</Text><Text style={[styles.num, styles.total]}>{money(inv.grossTotal)}</Text></Row>
-        {inv.legalNote && <Muted>{inv.legalNote}</Muted>}
+        <CardHeader>
+          <View className="flex-row items-center justify-between">
+            <CardTitle>{title}</CardTitle>
+            <StatusPill status={inv.status} />
+          </View>
+          <CardDescription>
+            Ausgestellt: {date(inv.issueDate)} · Leistung: {date(inv.serviceDateFrom)} · Fällig: {date(inv.dueDate)}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="gap-3">
+          {inv.lines.map((l) => (
+            <View key={l.position} className="flex-row items-start justify-between gap-3">
+              <View className="flex-1">
+                <Text className="font-semibold">{l.description}</Text>
+                <Text variant="muted">
+                  {l.quantity} {l.unit} × {money(l.unitPrice)} · {l.vatRate} %
+                </Text>
+              </View>
+              <Text className="tabular-nums">{money(l.netAmount)}</Text>
+            </View>
+          ))}
+          <Separator />
+          <AmountRow label="Netto" value={money(inv.netTotal)} />
+          <AmountRow label="USt" value={money(inv.vatTotal)} />
+          <AmountRow label="Gesamt" value={money(inv.grossTotal)} strong />
+          {inv.legalNote && <Text variant="muted">{inv.legalNote}</Text>}
+        </CardContent>
       </Card>
 
       <ErrorBox message={error?.message ?? null} errors={error?.errors} />
 
       {inv.status === 'DRAFT' && (
         <>
-          <Button title="Ausstellen (Nummer vergeben)" busy={busy} onPress={() => run(() => api.issue(token, inv.id))} />
-          <Muted>Nach dem Ausstellen ist der Beleg festgeschrieben und kann nur noch storniert werden (GoBD).</Muted>
-          <Button
+          <ActionButton title="Ausstellen (Nummer vergeben)" busy={busy} onPress={() => run(() => api.issue(token, inv.id))} />
+          <Text variant="muted">
+            Nach dem Ausstellen ist der Beleg festgeschrieben und kann nur noch storniert werden (GoBD).
+          </Text>
+          <ActionButton
             title="Entwurf löschen"
-            variant="danger"
+            variant="destructive"
             disabled={busy}
             onPress={() => run(() => api.deleteDraft(token, inv.id), () => router.back())}
           />
@@ -107,32 +113,27 @@ export default function InvoiceDetailScreen() {
       )}
 
       {inv.docType === 'RECHNUNG' && inv.status === 'ISSUED' && (
-        <Button title="Als bezahlt markieren" busy={busy} onPress={() => run(() => api.markPaid(token, inv.id))} />
+        <ActionButton title="Als bezahlt markieren" busy={busy} onPress={() => run(() => api.markPaid(token, inv.id))} />
       )}
 
-      {inv.docType === 'RECHNUNG' && (inv.status === 'ISSUED' || inv.status === 'PAID') &&
+      {inv.docType === 'RECHNUNG' &&
+        (inv.status === 'ISSUED' || inv.status === 'PAID') &&
         (confirmCancel ? (
-          <Card style={{ borderColor: colors.danger }}>
-            <Text>Es wird eine Stornorechnung mit negativen Beträgen erstellt. Fortfahren?</Text>
-            <Button
-              title="Ja, stornieren"
-              variant="danger"
-              busy={busy}
-              onPress={() => run(() => api.cancel(token, inv.id), (s) => s && router.replace(`/invoices/${s.id}`))}
-            />
-            <Button title="Abbrechen" variant="ghost" onPress={() => setConfirmCancel(false)} />
+          <Card className="border-destructive">
+            <CardContent className="gap-3">
+              <Text>Es wird eine Stornorechnung mit negativen Beträgen erstellt. Fortfahren?</Text>
+              <ActionButton
+                title="Ja, stornieren"
+                variant="destructive"
+                busy={busy}
+                onPress={() => run(() => api.cancel(token, inv.id), (s) => s && router.replace(`/invoices/${s.id}`))}
+              />
+              <ActionButton title="Abbrechen" variant="outline" onPress={() => setConfirmCancel(false)} />
+            </CardContent>
           </Card>
         ) : (
-          <Button title="Stornieren" variant="danger" onPress={() => setConfirmCancel(true)} />
+          <ActionButton title="Stornieren" variant="outline" onPress={() => setConfirmCancel(true)} />
         ))}
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  line: { borderBottomWidth: 1, borderBottomColor: colors.line, paddingBottom: 6, alignItems: 'flex-start' },
-  desc: { flex: 1, color: colors.ink, fontWeight: '600' },
-  sub: { color: colors.muted, fontWeight: '400' },
-  num: { fontVariant: ['tabular-nums'], color: colors.ink },
-  total: { fontWeight: '700', fontSize: 16 },
-});

@@ -1,8 +1,10 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { View } from 'react-native';
 
-import { Button, Card, colors, ErrorBox, Field, H2, Muted, Row, Screen } from '@/components/ui';
+import { ActionButton, ErrorBox, Field, Screen } from '@/components/app-ui';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Text } from '@/components/ui/text';
 import { api, ApiError, Customer } from '@/lib/api';
 import { useToken } from '@/lib/auth';
 
@@ -46,32 +48,41 @@ export default function CustomersScreen() {
   return (
     <Screen>
       <Card>
-        <H2>Neuer Kunde</H2>
-        <Field label="Name / Firma" value={form.name} onChangeText={set('name')} />
-        <Field label="Straße und Hausnummer" value={form.street} onChangeText={set('street')} />
-        <Row>
-          <Field label="PLZ" value={form.zip} onChangeText={set('zip')} keyboardType="number-pad" />
-          <Field label="Ort" value={form.city} onChangeText={set('city')} />
-        </Row>
-        <Field label="E-Mail" value={form.email} onChangeText={set('email')} autoCapitalize="none" />
-        <Field label="USt-IdNr. (für B2B / Reverse-Charge)" value={form.ustId} onChangeText={set('ustId')} autoCapitalize="characters" />
-        <ErrorBox message={error?.message ?? null} errors={error?.errors} />
-        <Button title="Kunde speichern" onPress={save} busy={busy} />
+        <CardHeader>
+          <CardTitle>Neuer Kunde</CardTitle>
+        </CardHeader>
+        <CardContent className="gap-3">
+          <Field label="Name / Firma" value={form.name} onChangeText={set('name')} />
+          <Field label="Straße und Hausnummer" value={form.street} onChangeText={set('street')} />
+          <View className="flex-row gap-2">
+            <Field label="PLZ" value={form.zip} onChangeText={set('zip')} keyboardType="number-pad" />
+            <Field label="Ort" value={form.city} onChangeText={set('city')} className="flex-[2]" />
+          </View>
+          <Field label="E-Mail" value={form.email} onChangeText={set('email')} autoCapitalize="none" />
+          <Field
+            label="USt-IdNr. (für B2B / Reverse-Charge)"
+            value={form.ustId}
+            onChangeText={set('ustId')}
+            autoCapitalize="characters"
+          />
+          <ErrorBox message={error?.message ?? null} errors={error?.errors} />
+          <ActionButton title="Kunde speichern" onPress={save} busy={busy} />
+        </CardContent>
       </Card>
 
       {customers.map((c) => (
-        <Card key={c.id}>
-          <Row>
-            <Text style={styles.name}>{c.name}</Text>
-            <Muted>Nr. {c.customerNumber}</Muted>
-          </Row>
-          <Muted>{[c.street, [c.zip, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ') || 'Keine Anschrift'}</Muted>
+        <Card key={c.id} className="py-4">
+          <CardContent className="gap-1">
+            <View className="flex-row items-center justify-between">
+              <Text className="font-semibold">{c.name}</Text>
+              <Text variant="muted">Nr. {c.customerNumber}</Text>
+            </View>
+            <Text variant="muted">
+              {[c.street, [c.zip, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ') || 'Keine Anschrift'}
+            </Text>
+          </CardContent>
         </Card>
       ))}
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  name: { fontWeight: '700', color: colors.ink },
-});
