@@ -63,7 +63,9 @@ de.rechnio
 | GET/PUT | `/api/organization` | Firmenstammdaten |
 | GET/POST/PUT | `/api/customers` | Kunden |
 | GET/POST/PUT/DELETE | `/api/invoices` | Entwürfe von Rechnungen und Angeboten |
-| GET | `/api/invoices/{id}/pdf` | Beleg als PDF (DIN 5008; Entwürfe als ENTWURF markiert) |
+| GET | `/api/invoices/{id}/pdf` | Beleg als PDF/A-3b (DIN 5008; Entwürfe als ENTWURF markiert) |
+| GET | `/api/invoices/{id}/zugferd` | E-Rechnung ZUGFeRD / Factur-X (EN16931): PDF/A-3 mit eingebettetem XML |
+| GET | `/api/invoices/{id}/xrechnung` | E-Rechnung XRechnung 3.0 (CII-XML) |
 | POST | `/api/invoices/{id}/issue` | Ausstellen: Nummer vergeben, festschreiben |
 | POST | `/api/invoices/{id}/paid` | Als bezahlt markieren |
 | POST | `/api/invoices/{id}/cancel` | Stornorechnung erzeugen |
@@ -79,6 +81,17 @@ de.rechnio
 - DATEV-Export: Debitor `10000 + Kundennummer` an Erlös-Automatikkonto (SKR03 8400/8300, SKR04 4400/4300).
   **Vor dem produktiven Einsatz einmal mit dem Steuerberater probeweise in DATEV importieren.**
 
+## E-Rechnung
+
+- Erzeugt mit [Mustangproject](https://www.mustangproject.org/); jede Testrechnung wird mit dem Mustang-Validator
+  gegen XSD, EN 16931- und XRechnung-Schematron sowie PDF/A geprüft (`ERechnungIntegrationTest`).
+- Nur für ausgestellte Rechnungen und Stornos. Ein Storno wird als Gutschrift (Typ 381) mit Bezug auf die
+  Originalrechnung exportiert.
+- XRechnung verlangt zusätzlich: Ansprechpartner, Telefon und E-Mail der Firma, E-Mail des Kunden und IBAN.
+  Fehlt etwas, antwortet die API mit HTTP 422 und einer Liste der fehlenden Angaben.
+- Käuferreferenz (BT-10): Leitweg-ID des Kunden, sonst die Kundennummer.
+- Schrift im PDF: Liberation Sans (SIL Open Font License, `backend/src/main/resources/fonts/`).
+
 ## Tests
 
 ```bash
@@ -88,8 +101,8 @@ mvn test
 
 ## Noch offen
 
-- E-Rechnung (XRechnung / ZUGFeRD; das PDF ist dafür noch nicht PDF/A-3)
 - Logo im PDF-Briefkopf
+- Eingehende E-Rechnungen lesen (Pflicht zum Empfang seit 01.01.2025)
 - Versand per E-Mail, Mahnungen
 - Belege scannen (OCR)
 
