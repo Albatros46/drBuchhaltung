@@ -70,6 +70,10 @@ de.rechnio
 | POST | `/api/invoices/{id}/paid` | Als bezahlt markieren |
 | POST | `/api/invoices/{id}/cancel` | Stornorechnung erzeugen |
 | POST | `/api/invoices/{id}/convert` | Angebot in Rechnung umwandeln |
+| POST | `/api/incoming-invoices` (multipart `file`) | Eingehende E-Rechnung einlesen und prüfen |
+| GET | `/api/incoming-invoices`, `/api/incoming-invoices/{id}` | Eingangsrechnungen |
+| POST | `/api/incoming-invoices/{id}/paid` | Eingangsrechnung als bezahlt markieren |
+| GET | `/api/incoming-invoices/{id}/original` | Unveränderte Originaldatei |
 | GET | `/api/exports/datev?from=2026-01-01&to=2026-12-31` | DATEV-Buchungsstapel (EXTF CSV) |
 
 ## Fachliche Regeln
@@ -92,6 +96,11 @@ de.rechnio
 - Käuferreferenz (BT-10): Leitweg-ID des Kunden, sonst die Kundennummer.
 - Schrift im PDF: Liberation Sans (SIL Open Font License, `backend/src/main/resources/fonts/`).
 
+**Empfang:** ZUGFeRD-PDF, XRechnung (CII und UBL) sowie sonstiges EN-16931-XML werden eingelesen.
+Jede Datei wird beim Upload geprüft (XSD, Schematron, PDF/A); formal fehlerhafte Rechnungen werden
+trotzdem gespeichert und mit den Befunden markiert. Die Originaldatei bleibt unverändert erhalten (GoBD),
+doppelte Uploads werden über SHA-256 erkannt. Normale PDFs ohne eingebettetes XML werden abgelehnt.
+
 ## Tests
 
 ```bash
@@ -102,7 +111,8 @@ mvn test
 ## Noch offen
 
 - Logo im PDF-Briefkopf
-- Eingehende E-Rechnungen lesen (Pflicht zum Empfang seit 01.01.2025)
+- Eingangsrechnungen im DATEV-Export (Kreditoren)
+- E-Rechnungen per E-Mail empfangen (Postfach-Abruf)
 - Versand per E-Mail, Mahnungen
 - Belege scannen (OCR)
 
