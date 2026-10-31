@@ -90,6 +90,53 @@ export interface DraftInput {
   lines: LineInput[];
 }
 
+export type EInvoiceFormat = 'ZUGFERD' | 'XRECHNUNG_CII' | 'XRECHNUNG_UBL' | 'CII' | 'UBL';
+
+export interface IncomingInvoice {
+  id: string;
+  format: EInvoiceFormat;
+  documentType: 'RECHNUNG' | 'GUTSCHRIFT';
+  status: 'OPEN' | 'PAID';
+  supplierName: string | null;
+  supplierStreet: string | null;
+  supplierZip: string | null;
+  supplierCity: string | null;
+  supplierVatId: string | null;
+  supplierTaxId: string | null;
+  supplierIban: string | null;
+  number: string | null;
+  issueDate: string | null;
+  dueDate: string | null;
+  currency: string | null;
+  buyerReference: string | null;
+  paymentTerms: string | null;
+  netTotal: number;
+  vatTotal: number;
+  grossTotal: number;
+  validationStatus: 'VALID' | 'INVALID';
+  validationMessages: string[];
+  originalFilename: string;
+  paidAt: string | null;
+  receivedAt: string;
+  lines: {
+    position: number;
+    description: string | null;
+    quantity: number | null;
+    unit: string | null;
+    unitPrice: number | null;
+    vatRate: number | null;
+    netAmount: number | null;
+  }[];
+}
+
+/** Datei aus dem Dokumenten-Picker: auf dem Handy per URI, im Browser als File-Objekt. */
+export interface PickedFile {
+  uri: string;
+  name: string;
+  mimeType?: string;
+  file?: File;
+}
+
 /** Fehler vom Backend, inklusive der §14-UStG-Pruefliste bei HTTP 422. */
 export class ApiError extends Error {
   constructor(
@@ -160,4 +207,34 @@ export const api = {
   markPaid: (t: string, id: string) => request<Invoice>(`/api/invoices/${id}/paid`, t, { method: 'POST' }),
   cancel: (t: string, id: string) => request<Invoice>(`/api/invoices/${id}/cancel`, t, { method: 'POST' }),
   deleteDraft: (t: string, id: string) => request<void>(`/api/invoices/${id}`, t, { method: 'DELETE' }),
+
+  incomingInvoices: (t: string) => request<IncomingInvoice[]>('/api/incoming-invoices', t),
+  incomingInvoice: (t: string, id: string) => request<IncomingInvoice>(`/api/incoming-invoices/${id}`, t),
+  markIncomingPaid: (t: string, id: string) =>
+    request<IncomingInvoice>(`/api/incoming-invoices/${id}/paid`, t, { method: 'POST' }),
+  uploadIncoming: (t: string, f: PickedFile) => uploadIncoming(t, f),
 };
+
+async function uploadIncoming(token: string, picked: PickedFile): Promise<IncomingInvoice> {
+  const form = new FormData();
+  if (Platform.OS === 'web' && picked.file) {
+    form.append('file', picked.file, picked.name);
+  } else {
+    // React Native: Datei wird ueber ihre URI gestreamt
+    form.append('file', { uri: picked.uri, name: picked.name, type: picked.mimeType ?? 'application/octet-stream' } as unknown as Blob);
+  }
+  let res: Response;
+  try {
+    // Content-Type nicht setzen: fetch ergaenzt die multipart-Boundary selbst
+    res = await fetch(`${API_URL}/api/incoming-invoices`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+  } catch {
+    throw new ApiError(`Server nicht erreichbar (${API_URL}). Läuft das Backend?`, 0);
+  }
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(body.message ?? `Fehler ${res.status}`, res.status, body.errors ?? []);
+  return body as IncomingInvoice;
+}

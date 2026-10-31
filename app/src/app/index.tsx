@@ -83,6 +83,11 @@ export default function OverviewScreen() {
             <Text>Kunden</Text>
           </Button>
         </Link>
+        <Link href="/incoming" asChild>
+          <Button variant="link">
+            <Text>Eingangsrechnungen</Text>
+          </Button>
+        </Link>
         <Link href="/settings" asChild>
           <Button variant="link">
             <Text>Firma und Steuer</Text>

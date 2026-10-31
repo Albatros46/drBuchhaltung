@@ -41,6 +41,8 @@ function RootNavigator() {
         <Stack.Screen name="invoices/[id]" options={{ title: 'Beleg' }} />
         <Stack.Screen name="customers" options={{ title: 'Kunden' }} />
         <Stack.Screen name="settings" options={{ title: 'Firma' }} />
+        <Stack.Screen name="incoming/index" options={{ title: 'Eingangsrechnungen' }} />
+        <Stack.Screen name="incoming/[id]" options={{ title: 'Eingangsrechnung' }} />
       </Stack.Protected>
       <Stack.Protected guard={!session}>
         <Stack.Screen name="login" options={{ title: 'Anmelden', headerShown: false }} />
