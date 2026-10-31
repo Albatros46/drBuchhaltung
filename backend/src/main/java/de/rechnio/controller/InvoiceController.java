@@ -25,8 +25,10 @@ import de.rechnio.dto.InvoiceDraftRequest;
 import de.rechnio.dto.InvoiceResponse;
 import de.rechnio.dto.PaidRequest;
 import de.rechnio.dto.GeneratedFile;
+import de.rechnio.dto.InvoiceMailRequest;
 import de.rechnio.dto.PdfDocument;
 import de.rechnio.service.ERechnungService;
+import de.rechnio.service.InvoiceMailService;
 import de.rechnio.service.InvoicePdfService;
 import de.rechnio.service.InvoiceService;
 import jakarta.validation.Valid;
@@ -38,12 +40,14 @@ public class InvoiceController {
     private final InvoiceService invoiceService;
     private final InvoicePdfService invoicePdfService;
     private final ERechnungService eRechnungService;
+    private final InvoiceMailService invoiceMailService;
 
     public InvoiceController(InvoiceService invoiceService, InvoicePdfService invoicePdfService,
-                             ERechnungService eRechnungService) {
+                             ERechnungService eRechnungService, InvoiceMailService invoiceMailService) {
         this.invoiceService = invoiceService;
         this.invoicePdfService = invoicePdfService;
         this.eRechnungService = eRechnungService;
+        this.invoiceMailService = invoiceMailService;
     }
 
     @GetMapping
@@ -100,6 +104,17 @@ public class InvoiceController {
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         ContentDisposition.attachment().filename(file.filename()).build().toString())
                 .body(file.content());
+    }
+
+    @GetMapping("/{id}/email")
+    public InvoiceMailRequest emailDraft(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        return invoiceMailService.draft(CurrentUser.from(jwt), id);
+    }
+
+    @PostMapping("/{id}/send")
+    public InvoiceResponse send(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
+                                @Valid @RequestBody InvoiceMailRequest request) {
+        return invoiceMailService.send(CurrentUser.from(jwt), id, request);
     }
 
     @PostMapping("/{id}/issue")

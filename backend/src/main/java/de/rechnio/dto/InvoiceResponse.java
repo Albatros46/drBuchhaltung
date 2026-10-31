@@ -1,6 +1,7 @@
 package de.rechnio.dto;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -16,7 +17,7 @@ public record InvoiceResponse(UUID id, UUID customerId, DocType docType, Invoice
                               LocalDate serviceDateTo, LocalDate dueDate, String introText,
                               BigDecimal netTotal, BigDecimal vatTotal, BigDecimal grossTotal,
                               UUID cancelsInvoiceId, LocalDate paidAt, boolean locked, String legalNote,
-                              List<Line> lines) {
+                              Instant sentAt, String sentTo, List<Line> lines) {
 
     public record Line(int position, String description, BigDecimal quantity, String unit,
                        BigDecimal unitPrice, BigDecimal vatRate, BigDecimal netAmount) {
@@ -31,7 +32,7 @@ public record InvoiceResponse(UUID id, UUID customerId, DocType docType, Invoice
         return new InvoiceResponse(i.getId(), i.getCustomerId(), i.getDocType(), i.getStatus(), i.getTaxMode(),
                 i.getNumber(), i.getIssueDate(), i.getServiceDateFrom(), i.getServiceDateTo(), i.getDueDate(),
                 i.getIntroText(), i.getNetTotal(), i.getVatTotal(), i.getGrossTotal(), i.getCancelsInvoiceId(),
-                i.getPaidAt(), i.isLocked(), i.getTaxMode().legalNote(),
+                i.getPaidAt(), i.isLocked(), i.getTaxMode().legalNote(), i.getSentAt(), i.getSentTo(),
                 i.getLines().stream().map(Line::from).toList());
     }
 }

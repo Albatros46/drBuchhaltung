@@ -21,6 +21,19 @@ spring:
       max-request-size: 20MB
   flyway:
     enabled: true
+  # Rechnungsversand. Lokal: Test-Postfach Mailpit auf localhost:1025 (Weboberflaeche http://localhost:8025).
+  # Produktion: MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD und MAIL_STARTTLS=true setzen.
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${MAIL_AUTH:false}
+      mail.smtp.starttls.enable: ${MAIL_STARTTLS:false}
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 10000
+      mail.smtp.writetimeout: 10000
   h2:
     console:
       enabled: true
@@ -33,3 +46,7 @@ rechnio:
     ttl-hours: 12
   cors:
     allowed-origins: http://localhost:8081,http://localhost:19006
+  mail:
+    # Absenderadresse; die E-Mail-Adresse der Firma wird als Reply-To gesetzt.
+    # Viele SMTP-Anbieter erlauben nur eigene Absender, daher nicht die Firmenadresse als From.
+    from: ${MAIL_FROM:rechnung@rechnio.local}

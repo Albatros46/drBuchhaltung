@@ -47,6 +47,8 @@ public class Invoice {
     private BigDecimal grossTotal = BigDecimal.ZERO;
     private UUID cancelsInvoiceId;
     private LocalDate paidAt;
+    private Instant sentAt;
+    private String sentTo;
     private Instant lockedAt;
     private Instant createdAt;
 
@@ -125,5 +127,13 @@ public class Invoice {
     public LocalDate getPaidAt() { return paidAt; }
     public void setPaidAt(LocalDate paidAt) { this.paidAt = paidAt; }
     public Instant getLockedAt() { return lockedAt; }
+    public Instant getSentAt() { return sentAt; }
+    public String getSentTo() { return sentTo; }
+
+    /** Versand vermerken; ein festgeschriebener Beleg bleibt dabei inhaltlich unveraendert. */
+    public void markSent(String to, Instant at) {
+        this.sentTo = to;
+        this.sentAt = at;
+    }
     public List<InvoiceLine> getLines() { return lines; }
 }

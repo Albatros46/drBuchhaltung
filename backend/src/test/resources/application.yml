@@ -7,6 +7,10 @@ spring:
     hibernate:
       ddl-auto: validate
     open-in-view: false
+  # Nur damit der JavaMailSender angelegt wird; Versandtests ersetzen ihn durch ein Mock.
+  mail:
+    host: localhost
+    port: 3025
 
 rechnio:
   jwt:
@@ -14,3 +18,5 @@ rechnio:
     ttl-hours: 1
   cors:
     allowed-origins: http://localhost:8081
+  mail:
+    from: rechnung@test.local
