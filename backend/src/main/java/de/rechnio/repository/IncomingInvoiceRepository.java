@@ -1,5 +1,6 @@
 package de.rechnio.repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -15,4 +16,7 @@ public interface IncomingInvoiceRepository extends JpaRepository<IncomingInvoice
     Optional<IncomingInvoice> findByIdAndOrganizationId(UUID id, UUID organizationId);
 
     Optional<IncomingInvoice> findByOrganizationIdAndSha256(UUID organizationId, String sha256);
+
+    List<IncomingInvoice> findByOrganizationIdAndIssueDateBetweenOrderByIssueDateAscNumberAsc(
+            UUID organizationId, LocalDate from, LocalDate to);
 }

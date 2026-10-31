@@ -22,7 +22,7 @@ public record IncomingInvoiceResponse(UUID id, EInvoiceFormat format, IncomingDo
                                       String buyerReference, String paymentTerms, BigDecimal netTotal,
                                       BigDecimal vatTotal, BigDecimal grossTotal, ValidationStatus validationStatus,
                                       List<String> validationMessages, String originalFilename, LocalDate paidAt,
-                                      Instant receivedAt, List<Line> lines) {
+                                      Instant receivedAt, Integer kreditorAccount, List<Line> lines) {
 
     public record Line(int position, String description, BigDecimal quantity, String unit, BigDecimal unitPrice,
                        BigDecimal vatRate, BigDecimal netAmount) {
@@ -33,7 +33,8 @@ public record IncomingInvoiceResponse(UUID id, EInvoiceFormat format, IncomingDo
         }
     }
 
-    public static IncomingInvoiceResponse from(IncomingInvoice i) {
+    /** @param kreditorAccount DATEV-Kreditorenkonto des Lieferanten (70000 + Lieferantennummer) oder null */
+    public static IncomingInvoiceResponse from(IncomingInvoice i, Integer kreditorAccount) {
         List<String> messages = i.getValidationMessages() == null || i.getValidationMessages().isBlank()
                 ? List.of() : Arrays.asList(i.getValidationMessages().split("\n"));
         return new IncomingInvoiceResponse(i.getId(), i.getFormat(), i.getDocumentType(), i.getStatus(),
@@ -41,7 +42,7 @@ public record IncomingInvoiceResponse(UUID id, EInvoiceFormat format, IncomingDo
                 i.getSupplierCountry(), i.getSupplierVatId(), i.getSupplierTaxId(), i.getSupplierIban(),
                 i.getNumber(), i.getIssueDate(), i.getDueDate(), i.getCurrency(), i.getBuyerReference(),
                 i.getPaymentTerms(), i.getNetTotal(), i.getVatTotal(), i.getGrossTotal(), i.getValidationStatus(),
-                messages, i.getOriginalFilename(), i.getPaidAt(), i.getReceivedAt(),
+                messages, i.getOriginalFilename(), i.getPaidAt(), i.getReceivedAt(), kreditorAccount,
                 i.getLines().stream().map(Line::from).toList());
     }
 }

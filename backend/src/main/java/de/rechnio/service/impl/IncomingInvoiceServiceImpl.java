@@ -13,8 +13,11 @@ import java.util.Date;
 import java.util.HexFormat;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -45,6 +48,7 @@ import de.rechnio.dto.IncomingInvoiceResponse;
 import de.rechnio.entity.AuditLog;
 import de.rechnio.entity.IncomingInvoice;
 import de.rechnio.entity.IncomingInvoiceFile;
+import de.rechnio.entity.Supplier;
 import de.rechnio.enums.EInvoiceFormat;
 import de.rechnio.enums.IncomingDocType;
 import de.rechnio.enums.IncomingStatus;
@@ -53,7 +57,10 @@ import de.rechnio.exception.ApiException;
 import de.rechnio.repository.AuditLogRepository;
 import de.rechnio.repository.IncomingInvoiceFileRepository;
 import de.rechnio.repository.IncomingInvoiceRepository;
+import de.rechnio.repository.SupplierRepository;
 import de.rechnio.service.IncomingInvoiceService;
+import de.rechnio.service.SupplierService;
+import de.rechnio.util.DatevAccounts;
 
 @Service
 public class IncomingInvoiceServiceImpl implements IncomingInvoiceService {
@@ -66,13 +73,18 @@ public class IncomingInvoiceServiceImpl implements IncomingInvoiceService {
 
     private final IncomingInvoiceRepository invoices;
     private final IncomingInvoiceFileRepository files;
+    private final SupplierRepository suppliers;
+    private final SupplierService supplierService;
     private final AuditLogRepository audit;
     private final Clock clock;
 
     public IncomingInvoiceServiceImpl(IncomingInvoiceRepository invoices, IncomingInvoiceFileRepository files,
+                                      SupplierRepository suppliers, SupplierService supplierService,
                                       AuditLogRepository audit, Clock clock) {
         this.invoices = invoices;
         this.files = files;
+        this.suppliers = suppliers;
+        this.supplierService = supplierService;
         this.audit = audit;
         this.clock = clock;
     }
@@ -99,24 +111,29 @@ public class IncomingInvoiceServiceImpl implements IncomingInvoiceService {
             inv.setSupplierName(ublSupplierName(content));
         }
         validate(inv, content);
+        Supplier supplier = supplierService.assign(inv);
         invoices.save(inv);
         files.save(new IncomingInvoiceFile(inv.getId(), pdf ? "application/pdf" : "application/xml", content));
         audit.save(new AuditLog(user.organizationId(), "INCOMING_INVOICE", inv.getId(), "RECEIVED",
                 format + " " + label(inv), user.email()));
-        return IncomingInvoiceResponse.from(inv);
+        return IncomingInvoiceResponse.from(inv, kreditor(supplier));
     }
 
+    // Nicht readOnly: Rechnungen aus der Zeit vor der Lieferantenzuordnung werden hier nachtraeglich zugeordnet.
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<IncomingInvoiceResponse> list(CurrentUser user) {
-        return invoices.findByOrganizationIdOrderByReceivedAtDesc(user.organizationId())
-                .stream().map(IncomingInvoiceResponse::from).toList();
+        Map<UUID, Supplier> byId = suppliers.findByOrganizationId(user.organizationId()).stream()
+                .collect(Collectors.toMap(Supplier::getId, Function.identity()));
+        return invoices.findByOrganizationIdOrderByReceivedAtDesc(user.organizationId()).stream()
+                .map(inv -> IncomingInvoiceResponse.from(inv, kreditor(supplierOf(inv, byId))))
+                .toList();
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public IncomingInvoiceResponse get(CurrentUser user, UUID id) {
-        return IncomingInvoiceResponse.from(load(user, id));
+        return response(load(user, id));
     }
 
     @Override
@@ -130,7 +147,26 @@ public class IncomingInvoiceServiceImpl implements IncomingInvoiceService {
         inv.setPaidAt(paidAt == null ? LocalDate.now(clock) : paidAt);
         audit.save(new AuditLog(user.organizationId(), "INCOMING_INVOICE", inv.getId(), "PAID",
                 inv.getPaidAt().toString(), user.email()));
-        return IncomingInvoiceResponse.from(inv);
+        return response(inv);
+    }
+
+    private IncomingInvoiceResponse response(IncomingInvoice inv) {
+        Supplier supplier = inv.getSupplierId() == null ? supplierService.assign(inv)
+                : suppliers.findById(inv.getSupplierId()).orElseGet(() -> supplierService.assign(inv));
+        return IncomingInvoiceResponse.from(inv, kreditor(supplier));
+    }
+
+    private Supplier supplierOf(IncomingInvoice inv, Map<UUID, Supplier> byId) {
+        Supplier s = inv.getSupplierId() == null ? null : byId.get(inv.getSupplierId());
+        if (s == null) {
+            s = supplierService.assign(inv);
+            byId.put(s.getId(), s);
+        }
+        return s;
+    }
+
+    private static Integer kreditor(Supplier s) {
+        return s == null ? null : DatevAccounts.KREDITOR_BASE + s.getSupplierNumber();
     }
 
     @Override

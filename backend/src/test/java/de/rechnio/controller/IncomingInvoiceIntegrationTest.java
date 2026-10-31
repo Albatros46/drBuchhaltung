@@ -158,6 +158,45 @@ class IncomingInvoiceIntegrationTest {
     }
 
     @Test
+    void datevExportBooksIncomingInvoicesOnKreditors() throws Exception {
+        String buyer = register();
+        call(buyer, put("/api/organization"), """
+                {"name":"Käufer GmbH","street":"Weg 1","zip":"10115","city":"Berlin","steuernummer":"11/111/11111",
+                 "kontenrahmen":"SKR03","datevBeraterNr":1001,"datevMandantNr":7}
+                """).andExpect(status().isOk());
+
+        Supplier yilmaz = supplier();
+        JsonNode first = upload(buyer, "a.xml", yilmaz.xrechnung()).andReturnJson();
+        assertThat(first.get("kreditorAccount").asInt()).isEqualTo(70001);
+        Supplier yilmazAgain = withInvoice(yilmaz.token());
+        assertThat(upload(buyer, "b.xml", yilmazAgain.xrechnung()).andReturnJson().get("kreditorAccount").asInt())
+                .as("gleicher Lieferant, gleicher Kreditor").isEqualTo(70001);
+        Supplier other = supplier("Holz Meier KG", "DE987654321");
+        assertThat(upload(buyer, "c.xml", other.xrechnung()).andReturnJson().get("kreditorAccount").asInt())
+                .isEqualTo(70002);
+        String stornoId = yilmaz.body(yilmaz.call(post("/api/invoices/" + yilmaz.invoiceId() + "/cancel")))
+                .get("id").asText();
+        byte[] storno = yilmaz.call(get("/api/invoices/" + stornoId + "/xrechnung"))
+                .andReturn().getResponse().getContentAsByteArray();
+        upload(buyer, "d.xml", storno).andExpect(status().isCreated());
+
+        int year = java.time.LocalDate.now(java.time.ZoneId.of("Europe/Berlin")).getYear();
+        byte[] bytes = call(buyer, get("/api/exports/datev?from=" + year + "-01-01&to=" + year + "-12-31"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+        String csv = new String(bytes, java.nio.charset.Charset.forName("windows-1252"));
+        String[] rows = csv.split("\r\n");
+
+        assertThat(rows).hasSize(2 + 4);
+        assertThat(rows[0]).contains("\"Rechnungsausgang und -eingang ");
+        // Rechnung: Kreditor im Haben gegen Wareneingang 19 % (SKR03 3400)
+        assertThat(csv).containsSubsequence("880,56;\"H\";\"EUR\";;;\"\";70001;3400;", "880,56;\"H\";\"EUR\";;;\"\";70001;3400;");
+        assertThat(csv).contains("880,56;\"H\";\"EUR\";;;\"\";70002;3400;");
+        // Gutschrift des Lieferanten: Kreditor im Soll
+        assertThat(csv).contains("880,56;\"S\";\"EUR\";;;\"\";70001;3400;");
+        assertThat(csv).contains("\"Yilmaz Fliesenbau\"", "\"Holz Meier KG\"");
+    }
+
+    @Test
     void markPaidAndTenantIsolation() throws Exception {
         Supplier s = supplier();
         String buyer = register();
@@ -198,13 +237,22 @@ class IncomingInvoiceIntegrationTest {
     }
 
     private Supplier supplier() throws Exception {
+        return supplier("Yilmaz Fliesenbau", "DE123456789");
+    }
+
+    private Supplier supplier(String name, String ustId) throws Exception {
         String token = register();
         call(token, put("/api/organization"), """
-                {"name":"Yilmaz Fliesenbau","street":"Ringstr. 5","zip":"50668","city":"Köln",
-                 "steuernummer":"12/345/67890","ustId":"DE123456789","kontenrahmen":"SKR03",
+                {"name":"%s","street":"Ringstr. 5","zip":"50668","city":"Köln",
+                 "steuernummer":"12/345/67890","ustId":"%s","kontenrahmen":"SKR03",
                  "iban":"DE02120300000000202051","bic":"BYLADEM1001",
                  "email":"info@yilmaz-fliesen.example","contactName":"Ali Yilmaz","phone":"+49 221 123456"}
-                """).andExpect(status().isOk());
+                """.formatted(name, ustId)).andExpect(status().isOk());
+        return withInvoice(token);
+    }
+
+    /** Stellt beim selben Lieferanten eine weitere Rechnung aus. */
+    private Supplier withInvoice(String token) throws Exception {
         String customerId = json.readTree(call(token, post("/api/customers"), """
                 {"name":"Müller GmbH","street":"Hauptstr. 1","zip":"50667","city":"Köln","email":"einkauf@mueller.example"}
                 """).andReturn().getResponse().getContentAsString()).get("id").asText();

@@ -28,6 +28,7 @@ public class IncomingInvoice {
     @Id
     private UUID id;
     private UUID organizationId;
+    private UUID supplierId;
 
     @Enumerated(EnumType.STRING)
     private EInvoiceFormat format;
@@ -110,6 +111,8 @@ public class IncomingInvoice {
 
     public UUID getId() { return id; }
     public UUID getOrganizationId() { return organizationId; }
+    public UUID getSupplierId() { return supplierId; }
+    public void setSupplierId(UUID supplierId) { this.supplierId = supplierId; }
     public EInvoiceFormat getFormat() { return format; }
     public IncomingDocType getDocumentType() { return documentType; }
     public void setDocumentType(IncomingDocType documentType) { this.documentType = documentType; }
