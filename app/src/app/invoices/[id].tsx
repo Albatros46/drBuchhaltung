@@ -9,12 +9,15 @@ import { Text } from '@/components/ui/text';
 import { api, ApiError, Invoice } from '@/lib/api';
 import { useToken } from '@/lib/auth';
 import { date, money } from '@/lib/format';
-import { openInvoicePdf } from '@/lib/pdf';
+import { openDocument } from '@/lib/download';
 
 const DOC_TITLE = { RECHNUNG: 'Rechnung', ANGEBOT: 'Angebot', STORNO: 'Stornorechnung' } as const;
 
-function pdfFileName(inv: Invoice) {
-  return inv.number ? `${DOC_TITLE[inv.docType]}-${inv.number}.pdf` : `Entwurf-${DOC_TITLE[inv.docType]}.pdf`;
+function fileName(inv: Invoice, kind: 'pdf' | 'zugferd' | 'xrechnung') {
+  const base = inv.number ? `${DOC_TITLE[inv.docType]}-${inv.number}` : `Entwurf-${DOC_TITLE[inv.docType]}`;
+  if (kind === 'zugferd') return `${base}-ZUGFeRD.pdf`;
+  if (kind === 'xrechnung') return `XRechnung-${inv.number}.xml`;
+  return `${base}.pdf`;
 }
 
 export default function InvoiceDetailScreen() {
@@ -108,8 +111,48 @@ export default function InvoiceDetailScreen() {
         title={inv.status === 'DRAFT' ? 'PDF-Vorschau (Entwurf)' : 'PDF öffnen / teilen'}
         variant="secondary"
         disabled={busy}
-        onPress={() => run(() => openInvoicePdf(token, inv.id, pdfFileName(inv)), () => {})}
+        onPress={() =>
+          run(() => openDocument(token, `/api/invoices/${inv.id}/pdf`, fileName(inv, 'pdf'), 'application/pdf'), () => {})
+        }
       />
+
+      {inv.docType !== 'ANGEBOT' && inv.status !== 'DRAFT' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>E-Rechnung</CardTitle>
+            <CardDescription>
+              ZUGFeRD: PDF mit eingebetteten Rechnungsdaten für Geschäftskunden. XRechnung: XML für Behörden
+              (Leitweg-ID beim Kunden hinterlegen).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex-row gap-2">
+            <ActionButton
+              title="ZUGFeRD-PDF"
+              variant="outline"
+              className="flex-1"
+              disabled={busy}
+              onPress={() =>
+                run(
+                  () => openDocument(token, `/api/invoices/${inv.id}/zugferd`, fileName(inv, 'zugferd'), 'application/pdf'),
+                  () => {},
+                )
+              }
+            />
+            <ActionButton
+              title="XRechnung (XML)"
+              variant="outline"
+              className="flex-1"
+              disabled={busy}
+              onPress={() =>
+                run(
+                  () => openDocument(token, `/api/invoices/${inv.id}/xrechnung`, fileName(inv, 'xrechnung'), 'application/xml'),
+                  () => {},
+                )
+              }
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {inv.status === 'DRAFT' && (
         <>

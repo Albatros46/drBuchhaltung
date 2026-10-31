@@ -43,6 +43,7 @@ export interface Customer {
   city?: string | null;
   email?: string | null;
   ustId?: string | null;
+  leitwegId?: string | null;
 }
 
 export interface InvoiceLine {
@@ -115,6 +116,21 @@ async function request<T>(path: string, token: string | null, init: RequestInit 
     throw new ApiError(body.message ?? `Fehler ${res.status}`, res.status, body.errors ?? []);
   }
   return body as T;
+}
+
+/** Laedt eine erzeugte Datei (PDF, XML). Bei Fehlern kommt die Begruendung des Backends inklusive Liste. */
+export async function fetchFile(token: string, path: string): Promise<Response> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, { headers: { Authorization: `Bearer ${token}` } });
+  } catch {
+    throw new ApiError(`Server nicht erreichbar (${API_URL}). Läuft das Backend?`, 0);
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new ApiError(body.message ?? `Datei konnte nicht erzeugt werden (Fehler ${res.status})`, res.status, body.errors ?? []);
+  }
+  return res;
 }
 
 const json = (data: unknown) => JSON.stringify(data);

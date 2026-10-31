@@ -8,7 +8,7 @@ import { Text } from '@/components/ui/text';
 import { api, ApiError, Customer } from '@/lib/api';
 import { useToken } from '@/lib/auth';
 
-const empty = { name: '', street: '', zip: '', city: '', email: '', ustId: '' };
+const empty = { name: '', street: '', zip: '', city: '', email: '', ustId: '', leitwegId: '' };
 
 export default function CustomersScreen() {
   const token = useToken();
@@ -35,6 +35,7 @@ export default function CustomersScreen() {
         city: form.city || null,
         email: form.email || null,
         ustId: form.ustId || null,
+        leitwegId: form.leitwegId || null,
       });
       setForm(empty);
       load();
@@ -58,12 +59,24 @@ export default function CustomersScreen() {
             <Field label="PLZ" value={form.zip} onChangeText={set('zip')} keyboardType="number-pad" />
             <Field label="Ort" value={form.city} onChangeText={set('city')} className="flex-[2]" />
           </View>
-          <Field label="E-Mail" value={form.email} onChangeText={set('email')} autoCapitalize="none" />
+          <Field
+            label="E-Mail (Pflicht für XRechnung)"
+            value={form.email}
+            onChangeText={set('email')}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
           <Field
             label="USt-IdNr. (für B2B / Reverse-Charge)"
             value={form.ustId}
             onChangeText={set('ustId')}
             autoCapitalize="characters"
+          />
+          <Field
+            label="Leitweg-ID (nur Behörden)"
+            value={form.leitwegId}
+            onChangeText={set('leitwegId')}
+            placeholder="z. B. 05315000-12345-67"
           />
           <ErrorBox message={error?.message ?? null} errors={error?.errors} />
           <ActionButton title="Kunde speichern" onPress={save} busy={busy} />
