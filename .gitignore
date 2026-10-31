@@ -5,6 +5,10 @@ data/
 *.db
 *.log
 
+# Lokale Werkzeug-Zustaende (Claude Code / oh-my-claudecode)
+.omc/
+.claude/settings.local.json
+
 # IDE
 .idea/
 *.iml
