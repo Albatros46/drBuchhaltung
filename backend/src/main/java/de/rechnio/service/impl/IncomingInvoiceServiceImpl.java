@@ -275,7 +275,9 @@ public class IncomingInvoiceServiceImpl implements IncomingInvoiceService {
             Matcher m = REPORT_ERROR.matcher(report);
             while (m.find() && messages.size() < MAX_MESSAGES) {
                 messages.add(m.group(1).replace("&quot;", "\"").replace("&apos;", "'").replace("&lt;", "<")
-                        .replace("&gt;", ">").replace("&amp;", "&").trim());
+                        .replace("&gt;", ">").replace("&amp;", "&")
+                        .replaceAll("\\s*\\[ID [^]]+\\] from \\S+?\\)?$", "") // technischer Verweis auf das XSLT
+                        .trim());
             }
             if (messages.isEmpty()) messages.add("Die Prüfung hat Fehler gemeldet, aber keine Einzelheiten geliefert.");
             String joined = String.join("\n", messages);
