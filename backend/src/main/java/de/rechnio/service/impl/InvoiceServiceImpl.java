@@ -75,7 +75,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     public InvoiceResponse createDraft(CurrentUser user, InvoiceDraftRequest req) {
         DocType type = req.docType() == null ? DocType.RECHNUNG : req.docType();
         if (type == DocType.STORNO) {
-            throw ApiException.badRequest("Stornorechnungen entstehen nur ueber 'Stornieren'");
+            throw ApiException.badRequest("Stornorechnungen entstehen nur über 'Stornieren'");
         }
         Organization org = organization(user);
         customer(user, req.customerId());
@@ -135,7 +135,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     public InvoiceResponse markPaid(CurrentUser user, UUID id, LocalDate paidAt) {
         Invoice inv = load(user, id);
         if (inv.getDocType() != DocType.RECHNUNG || inv.getStatus() != InvoiceStatus.ISSUED) {
-            throw ApiException.conflict("Nur ausgestellte, offene Rechnungen koennen als bezahlt markiert werden");
+            throw ApiException.conflict("Nur ausgestellte, offene Rechnungen können als bezahlt markiert werden");
         }
         inv.setStatus(InvoiceStatus.PAID);
         inv.setPaidAt(paidAt == null ? LocalDate.now(clock) : paidAt);
@@ -149,7 +149,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         Invoice original = load(user, id);
         if (original.getDocType() != DocType.RECHNUNG
                 || (original.getStatus() != InvoiceStatus.ISSUED && original.getStatus() != InvoiceStatus.PAID)) {
-            throw ApiException.conflict("Nur ausgestellte Rechnungen koennen storniert werden");
+            throw ApiException.conflict("Nur ausgestellte Rechnungen können storniert werden");
         }
         Invoice storno = new Invoice(user.organizationId(), original.getCustomerId(), DocType.STORNO, original.getTaxMode());
         storno.setCancelsInvoiceId(original.getId());
@@ -174,7 +174,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     public InvoiceResponse convertToInvoice(CurrentUser user, UUID offerId) {
         Invoice offer = load(user, offerId);
         if (offer.getDocType() != DocType.ANGEBOT) {
-            throw ApiException.conflict("Nur Angebote koennen in eine Rechnung umgewandelt werden");
+            throw ApiException.conflict("Nur Angebote können in eine Rechnung umgewandelt werden");
         }
         Invoice inv = new Invoice(user.organizationId(), offer.getCustomerId(), DocType.RECHNUNG, offer.getTaxMode());
         inv.setIntroText(offer.getIntroText());
@@ -192,14 +192,14 @@ public class InvoiceServiceImpl implements InvoiceService {
     private static List<String> missingMandatoryFields(Organization org, Customer customer, Invoice inv) {
         List<String> errors = new ArrayList<>();
         if (isBlank(org.getName()) || isBlank(org.getStreet()) || isBlank(org.getZip()) || isBlank(org.getCity())) {
-            errors.add("Vollstaendige Anschrift des Unternehmens fehlt");
+            errors.add("Vollständige Anschrift des Unternehmens fehlt");
         }
         if (isBlank(org.getSteuernummer()) && isBlank(org.getUstId())) {
             errors.add("Steuernummer oder USt-IdNr. des Unternehmens fehlt");
         }
         if (isBlank(customer.getName()) || isBlank(customer.getStreet()) || isBlank(customer.getZip())
                 || isBlank(customer.getCity())) {
-            errors.add("Vollstaendige Anschrift des Kunden fehlt");
+            errors.add("Vollständige Anschrift des Kunden fehlt");
         }
         if (inv.getLines().isEmpty()) {
             errors.add("Mindestens eine Position ist erforderlich");
@@ -211,7 +211,7 @@ public class InvoiceServiceImpl implements InvoiceService {
             errors.add("USt-IdNr. des Kunden ist bei Reverse-Charge (§13b UStG) erforderlich");
         }
         if (inv.getGrossTotal().signum() < 0) {
-            errors.add("Rechnungsbetrag darf nicht negativ sein (dafuer 'Stornieren' verwenden)");
+            errors.add("Rechnungsbetrag darf nicht negativ sein (dafür 'Stornieren' verwenden)");
         }
         return errors;
     }
@@ -224,7 +224,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         inv.clearLines();
         for (InvoiceLineRequest l : req.lines()) {
             if (ALLOWED_RATES.stream().noneMatch(r -> r.compareTo(l.vatRate()) == 0)) {
-                throw ApiException.badRequest("Unzulaessiger Steuersatz: " + l.vatRate() + " (erlaubt: 0, 7, 19)");
+                throw ApiException.badRequest("Unzulässiger Steuersatz: " + l.vatRate() + " (erlaubt: 0, 7, 19)");
             }
             inv.addLine(l.description(), l.quantity(), l.unit(), l.unitPrice(), l.vatRate());
         }
@@ -242,7 +242,7 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     private static void requireDraft(Invoice inv) {
         if (inv.isLocked()) {
-            throw ApiException.conflict("Beleg " + inv.getNumber() + " ist festgeschrieben und kann nicht geaendert werden");
+            throw ApiException.conflict("Beleg " + inv.getNumber() + " ist festgeschrieben und kann nicht geändert werden");
         }
     }
 

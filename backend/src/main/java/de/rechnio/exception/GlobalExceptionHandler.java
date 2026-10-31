@@ -29,6 +29,6 @@ public class GlobalExceptionHandler {
                 .map(e -> e.getField() + ": " + e.getDefaultMessage())
                 .toList();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("message", "Ungueltige Eingabe", "errors", errors));
+                .body(Map.of("message", "Ungültige Eingabe", "errors", errors));
     }
 }
