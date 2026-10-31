@@ -9,6 +9,13 @@ import { Text } from '@/components/ui/text';
 import { api, ApiError, Invoice } from '@/lib/api';
 import { useToken } from '@/lib/auth';
 import { date, money } from '@/lib/format';
+import { openInvoicePdf } from '@/lib/pdf';
+
+const DOC_TITLE = { RECHNUNG: 'Rechnung', ANGEBOT: 'Angebot', STORNO: 'Stornorechnung' } as const;
+
+function pdfFileName(inv: Invoice) {
+  return inv.number ? `${DOC_TITLE[inv.docType]}-${inv.number}.pdf` : `Entwurf-${DOC_TITLE[inv.docType]}.pdf`;
+}
 
 export default function InvoiceDetailScreen() {
   const { id, issue } = useLocalSearchParams<{ id: string; issue?: string }>();
@@ -96,6 +103,13 @@ export default function InvoiceDetailScreen() {
       </Card>
 
       <ErrorBox message={error?.message ?? null} errors={error?.errors} />
+
+      <ActionButton
+        title={inv.status === 'DRAFT' ? 'PDF-Vorschau (Entwurf)' : 'PDF öffnen / teilen'}
+        variant="secondary"
+        disabled={busy}
+        onPress={() => run(() => openInvoicePdf(token, inv.id, pdfFileName(inv)), () => {})}
+      />
 
       {inv.status === 'DRAFT' && (
         <>
