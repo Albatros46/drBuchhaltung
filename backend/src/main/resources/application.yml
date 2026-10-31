@@ -1,0 +1,30 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: rechnio
+  # Lokal: dateibasierte H2-Datenbank in ./data (kein DB-Server noetig).
+  # Fuer Produktion: Profil "postgres" aktivieren (siehe application-postgres.yml).
+  datasource:
+    url: jdbc:h2:file:./data/rechnio;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+rechnio:
+  jwt:
+    # Nur fuer lokale Entwicklung. In Produktion per Umgebungsvariable RECHNIO_JWT_SECRET setzen (min. 32 Zeichen).
+    secret: ${RECHNIO_JWT_SECRET:local-dev-secret-change-me-0123456789abcdef}
+    ttl-hours: 12
+  cors:
+    allowed-origins: http://localhost:8081,http://localhost:19006

@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:rechnio-test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+rechnio:
+  jwt:
+    secret: test-secret-0123456789abcdef0123456789abcdef
+    ttl-hours: 1
+  cors:
+    allowed-origins: http://localhost:8081

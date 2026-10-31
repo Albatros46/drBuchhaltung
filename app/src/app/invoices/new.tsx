@@ -1,0 +1,157 @@
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { Button, Card, colors, ErrorBox, Field, H2, Muted, Row, Screen } from '@/components/ui';
+import { api, ApiError, Customer, DocType, LineInput } from '@/lib/api';
+import { useToken } from '@/lib/auth';
+import { money, parseDecimal, previewTotals, today } from '@/lib/format';
+
+interface LineDraft {
+  description: string;
+  quantity: string;
+  unit: string;
+  unitPrice: string;
+  vatRate: number;
+}
+
+const emptyLine = (): LineDraft => ({ description: '', quantity: '1', unit: 'Stk', unitPrice: '', vatRate: 19 });
+const RATES = [19, 7, 0];
+
+export default function NewInvoiceScreen() {
+  const token = useToken();
+  const router = useRouter();
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customerId, setCustomerId] = useState<string | null>(null);
+  const [docType, setDocType] = useState<DocType>('RECHNUNG');
+  const [serviceDate, setServiceDate] = useState(today());
+  const [lines, setLines] = useState<LineDraft[]>([emptyLine()]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<ApiError | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      api.customers(token).then(setCustomers).catch((e: ApiError) => setError(e));
+    }, [token]),
+  );
+
+  const parsed: LineInput[] = lines.map((l) => ({
+    description: l.description.trim(),
+    quantity: parseDecimal(l.quantity),
+    unit: l.unit.trim(),
+    unitPrice: parseDecimal(l.unitPrice),
+    vatRate: l.vatRate,
+  }));
+  const totals = previewTotals(parsed);
+
+  const update = (i: number, patch: Partial<LineDraft>) =>
+    setLines((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+
+  const save = async (issueNow: boolean) => {
+    setError(null);
+    if (!customerId) return setError(new ApiError('Bitte einen Kunden auswählen', 400));
+    const invalid = parsed.findIndex(
+      (l) => !l.description || !l.unit || !(l.quantity > 0) || !Number.isFinite(l.unitPrice),
+    );
+    if (invalid >= 0) {
+      return setError(new ApiError(`Position ${invalid + 1}: Beschreibung, Menge, Einheit und Preis angeben`, 400));
+    }
+    setBusy(true);
+    try {
+      const draft = await api.createInvoice(token, {
+        customerId,
+        docType,
+        serviceDateFrom: serviceDate || null,
+        lines: parsed,
+      });
+      // Ausstellen uebernimmt die Detailseite: so bleibt der gespeicherte Entwurf sichtbar,
+      // falls Pflichtangaben fehlen, und es entsteht beim erneuten Tippen kein zweiter Entwurf.
+      router.replace({ pathname: '/invoices/[id]', params: { id: draft.id, ...(issueNow ? { issue: '1' } : {}) } });
+    } catch (e) {
+      setError(e as ApiError);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Screen>
+      <Card>
+        <H2>Belegart</H2>
+        <Row style={{ justifyContent: 'flex-start' }}>
+          {(['RECHNUNG', 'ANGEBOT'] as DocType[]).map((t) => (
+            <Chip key={t} label={t === 'RECHNUNG' ? 'Rechnung' : 'Angebot'} active={docType === t} onPress={() => setDocType(t)} />
+          ))}
+        </Row>
+      </Card>
+
+      <Card>
+        <H2>Kunde</H2>
+        {customers.length === 0 && (
+          <Muted>Noch keine Kunden. Legen Sie unter „Kunden“ zuerst einen an.</Muted>
+        )}
+        <View style={styles.wrap}>
+          {customers.map((c) => (
+            <Chip key={c.id} label={c.name} active={customerId === c.id} onPress={() => setCustomerId(c.id)} />
+          ))}
+        </View>
+        <Field label="Leistungsdatum (JJJJ-MM-TT)" value={serviceDate} onChangeText={setServiceDate} />
+      </Card>
+
+      <Card>
+        <H2>Positionen</H2>
+        {lines.map((l, i) => (
+          <View key={i} style={styles.line}>
+            <Field label={`Pos. ${i + 1} Beschreibung`} value={l.description} onChangeText={(v) => update(i, { description: v })} placeholder="Fliesen verlegen" />
+            <Row>
+              <Field label="Menge" value={l.quantity} onChangeText={(v) => update(i, { quantity: v })} keyboardType="decimal-pad" />
+              <Field label="Einheit" value={l.unit} onChangeText={(v) => update(i, { unit: v })} />
+              <Field label="Einzelpreis €" value={l.unitPrice} onChangeText={(v) => update(i, { unitPrice: v })} keyboardType="decimal-pad" placeholder="85,00" />
+            </Row>
+            <Row>
+              <Row style={{ justifyContent: 'flex-start' }}>
+                {RATES.map((r) => (
+                  <Chip key={r} label={`${r} %`} active={l.vatRate === r} onPress={() => update(i, { vatRate: r })} />
+                ))}
+              </Row>
+              {lines.length > 1 && (
+                <Pressable onPress={() => setLines((prev) => prev.filter((_, idx) => idx !== i))}>
+                  <Text style={{ color: colors.danger }}>Entfernen</Text>
+                </Pressable>
+              )}
+            </Row>
+          </View>
+        ))}
+        <Button title="+ Position" variant="ghost" onPress={() => setLines((prev) => [...prev, emptyLine()])} />
+      </Card>
+
+      <Card>
+        <Row><Text>Netto</Text><Text style={styles.num}>{money(totals.net)}</Text></Row>
+        <Row><Text>USt</Text><Text style={styles.num}>{money(totals.vat)}</Text></Row>
+        <Row><Text style={styles.total}>Gesamt</Text><Text style={[styles.num, styles.total]}>{money(totals.gross)}</Text></Row>
+        <Muted>Bei Kleinunternehmern (§ 19) und Reverse-Charge berechnet das Backend 0 % USt.</Muted>
+      </Card>
+
+      <ErrorBox message={error?.message ?? null} errors={error?.errors} />
+      <Button title={docType === 'RECHNUNG' ? 'Rechnung ausstellen' : 'Angebot ausstellen'} onPress={() => save(true)} busy={busy} />
+      <Button title="Als Entwurf speichern" variant="ghost" onPress={() => save(false)} disabled={busy} />
+    </Screen>
+  );
+}
+
+function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={[styles.chip, active && styles.chipActive]}>
+      <Text style={{ color: active ? colors.accent : colors.ink, fontWeight: active ? '700' : '400' }}>{label}</Text>
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  line: { gap: 8, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: colors.line },
+  chip: { borderWidth: 1, borderColor: colors.line, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
+  chipActive: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
+  num: { fontVariant: ['tabular-nums'], color: colors.ink },
+  total: { fontWeight: '700', fontSize: 16 },
+});
