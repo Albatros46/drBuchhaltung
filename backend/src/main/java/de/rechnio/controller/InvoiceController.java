@@ -3,7 +3,11 @@ package de.rechnio.controller;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -20,6 +24,8 @@ import de.rechnio.config.CurrentUser;
 import de.rechnio.dto.InvoiceDraftRequest;
 import de.rechnio.dto.InvoiceResponse;
 import de.rechnio.dto.PaidRequest;
+import de.rechnio.dto.PdfDocument;
+import de.rechnio.service.InvoicePdfService;
 import de.rechnio.service.InvoiceService;
 import jakarta.validation.Valid;
 
@@ -28,9 +34,11 @@ import jakarta.validation.Valid;
 public class InvoiceController {
 
     private final InvoiceService invoiceService;
+    private final InvoicePdfService invoicePdfService;
 
-    public InvoiceController(InvoiceService invoiceService) {
+    public InvoiceController(InvoiceService invoiceService, InvoicePdfService invoicePdfService) {
         this.invoiceService = invoiceService;
+        this.invoicePdfService = invoicePdfService;
     }
 
     @GetMapping
@@ -59,6 +67,16 @@ public class InvoiceController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
         invoiceService.deleteDraft(CurrentUser.from(jwt), id);
+    }
+
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<byte[]> pdf(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        PdfDocument pdf = invoicePdfService.render(CurrentUser.from(jwt), id);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.inline().filename(pdf.filename()).build().toString())
+                .body(pdf.content());
     }
 
     @PostMapping("/{id}/issue")

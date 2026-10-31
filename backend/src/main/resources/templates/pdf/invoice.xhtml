@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org" lang="de">
+<head>
+<meta charset="UTF-8"/>
+<title th:text="${v.title}">Rechnung</title>
+<style>
+  /* DIN 5008 Form B: Anschriftfeld 45 mm von oben, 20 mm von links, 85 x 45 mm. */
+  @page {
+    size: A4;
+    margin: 20mm 20mm 32mm 25mm;
+    @bottom-center { content: element(footer); }
+    @top-right { content: "Seite " counter(page) " von " counter(pages); font-family: Helvetica, sans-serif; font-size: 7.5pt; color: #5b6678; }
+  }
+  body { font-family: Helvetica, sans-serif; font-size: 9.5pt; color: #16233b; line-height: 1.35; }
+  .letterhead { height: 25mm; }
+  .letterhead .name { font-size: 16pt; font-weight: bold; }
+  .letterhead .addr { color: #5b6678; }
+  .window { position: absolute; top: 25mm; left: 0; width: 85mm; height: 45mm; }
+  .sender-line { font-size: 7pt; color: #5b6678; border-bottom: 0.3pt solid #c9d0da; padding-bottom: 1mm; margin-bottom: 3mm; }
+  .info { position: absolute; top: 25mm; right: 0; width: 70mm; }
+  .info table { width: 100%; border-collapse: collapse; }
+  .info td { padding: 0.6mm 0; vertical-align: top; }
+  .info td.k { color: #5b6678; width: 32mm; }
+  .content { margin-top: 52mm; }
+  h1 { font-size: 14pt; margin: 0 0 4mm 0; }
+  .draft { color: #b3261e; font-size: 10pt; font-weight: bold; letter-spacing: 1pt; margin-bottom: 2mm; }
+  table.items { width: 100%; border-collapse: collapse; margin-top: 4mm; }
+  table.items th { text-align: left; font-size: 8pt; color: #5b6678; font-weight: normal; border-bottom: 0.8pt solid #16233b; padding: 1.5mm 1.5mm; }
+  table.items td { border-bottom: 0.3pt solid #c9d0da; padding: 1.8mm 1.5mm; vertical-align: top; }
+  table.items tr { page-break-inside: avoid; }
+  .r { text-align: right; }
+  table.totals { width: 85mm; margin-left: auto; margin-top: 3mm; border-collapse: collapse; }
+  table.totals td { padding: 0.8mm 1.5mm; }
+  table.totals tr.gross td { font-weight: bold; font-size: 10.5pt; border-top: 0.8pt solid #16233b; padding-top: 1.5mm; }
+  .note { margin-top: 5mm; }
+  .footer { position: running(footer); font-size: 7pt; color: #5b6678; border-top: 0.3pt solid #c9d0da; padding-top: 2mm; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="footer">
+  <div th:each="row : ${v.footer}" th:text="${row}">Firma · Straße · Ort</div>
+</div>
+
+<div class="letterhead">
+  <div class="name" th:text="${v.sender.name}">Firma</div>
+  <div class="addr" th:text="${v.senderLine}">Straße · PLZ Ort</div>
+</div>
+
+<div class="window">
+  <div class="sender-line" th:text="${v.senderLine}">Absender</div>
+  <div th:text="${v.recipient.name}">Kunde</div>
+  <div th:if="${v.recipient.street}" th:text="${v.recipient.street}">Straße</div>
+  <div th:if="${v.recipient.zipCity}" th:text="${v.recipient.zipCity}">PLZ Ort</div>
+</div>
+
+<div class="info">
+  <table>
+    <tr>
+      <td class="k" th:text="${v.numberLabel}">Rechnungs-Nr.</td>
+      <td th:text="${v.draft} ? 'Entwurf' : ${v.number}">RE-2026-0001</td>
+    </tr>
+    <tr th:if="${v.issueDate}"><td class="k">Datum</td><td th:text="${v.issueDate}">31.10.2026</td></tr>
+    <tr th:if="${v.serviceDate}"><td class="k">Leistungsdatum</td><td th:text="${v.serviceDate}">31.10.2026</td></tr>
+    <tr><td class="k">Kunden-Nr.</td><td th:text="${v.customerNumber}">1</td></tr>
+    <tr th:if="${v.recipient.ustId}"><td class="k">USt-IdNr. Kunde</td><td th:text="${v.recipient.ustId}">DE…</td></tr>
+    <tr th:if="${v.dueDate}"><td class="k">Fällig am</td><td th:text="${v.dueDate}">14.11.2026</td></tr>
+  </table>
+</div>
+
+<div class="content">
+  <div class="draft" th:if="${v.draft}">ENTWURF – NICHT ALS RECHNUNG GÜLTIG</div>
+  <h1 th:text="${v.draft} ? ${v.title} : ${v.title} + ' ' + ${v.number}">Rechnung RE-2026-0001</h1>
+  <p th:if="${v.introText}" th:text="${v.introText}">Einleitung</p>
+
+  <table class="items">
+    <thead>
+      <tr>
+        <th>Pos.</th>
+        <th>Beschreibung</th>
+        <th class="r">Menge</th>
+        <th>Einheit</th>
+        <th class="r">Einzelpreis</th>
+        <th class="r">USt</th>
+        <th class="r">Netto</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:each="l : ${v.lines}">
+        <td th:text="${l.position}">1</td>
+        <td th:text="${l.description}">Leistung</td>
+        <td class="r" th:text="${l.quantity}">1</td>
+        <td th:text="${l.unit}">Stk</td>
+        <td class="r" th:text="${l.unitPrice}">0,00 €</td>
+        <td class="r" th:text="${l.vatRate}">19 %</td>
+        <td class="r" th:text="${l.net}">0,00 €</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <table class="totals">
+    <tr><td>Summe netto</td><td class="r" th:text="${v.net}">0,00 €</td></tr>
+    <tr th:each="row : ${v.vatRows}"><td th:text="${row.label}">USt</td><td class="r" th:text="${row.amount}">0,00 €</td></tr>
+    <tr class="gross"><td>Gesamtbetrag</td><td class="r" th:text="${v.gross}">0,00 €</td></tr>
+  </table>
+
+  <p class="note" th:if="${v.legalNote}" th:text="${v.legalNote}">Hinweis</p>
+  <p class="note" th:if="${v.paymentText}" th:text="${v.paymentText}">Zahlungshinweis</p>
+</div>
+
+</body>
+</html>

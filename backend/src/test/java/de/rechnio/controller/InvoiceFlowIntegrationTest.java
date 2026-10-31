@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.hamcrest.Matchers.containsString;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -89,6 +91,50 @@ class InvoiceFlowIntegrationTest {
         assertThat(csv).contains("862,75;\"S\";\"EUR\";;;\"\";10001;8400;");
         assertThat(csv).contains("862,75;\"H\";\"EUR\";;;\"\";10001;8400;");
         assertThat(csv).contains("\"ST-" + year + "-0001\"");
+    }
+
+    @Test
+    void issuedInvoiceRendersAsPdfWithMandatoryFields() throws Exception {
+        String token = register("PDF Test GmbH");
+        call(token, put("/api/organization"), """
+                {"name":"PDF Test GmbH","street":"Ringstr. 5","zip":"50668","city":"Köln",
+                 "steuernummer":"12/345/67890","iban":"DE02120300000000202051","kontenrahmen":"SKR03"}
+                """).andExpect(status().isOk());
+        String customerId = body(call(token, post("/api/customers"), """
+                {"name":"Müller GmbH","street":"Hauptstr. 1","zip":"50667","city":"Köln"}
+                """)).get("id").asText();
+        String invoiceId = body(call(token, post("/api/invoices"), draftJson(customerId, "2026-10-01")))
+                .get("id").asText();
+
+        // Entwurf: PDF ist moeglich, aber deutlich als Entwurf markiert
+        String draftText = pdfText(call(token, get("/api/invoices/" + invoiceId + "/pdf"), "")
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "application/pdf"))
+                .andReturn().getResponse().getContentAsByteArray());
+        assertThat(draftText).contains("ENTWURF");
+
+        call(token, post("/api/invoices/" + invoiceId + "/issue"), "").andExpect(status().isOk());
+        byte[] pdf = call(token, get("/api/invoices/" + invoiceId + "/pdf"), "")
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", containsString("Rechnung-RE-" + year + "-0001.pdf")))
+                .andReturn().getResponse().getContentAsByteArray();
+        assertThat(new String(pdf, 0, 5, java.nio.charset.StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
+
+        String text = pdfText(pdf);
+        assertThat(text)
+                .contains("Rechnung RE-" + year + "-0001")
+                .contains("Müller GmbH", "Hauptstr. 1", "50667 Köln")
+                .contains("Steuernummer 12/345/67890")
+                .contains("01.10.2026")                  // Leistungsdatum
+                .contains("zzgl. 19 % USt auf 725,00 €")
+                .contains("862,75 €")
+                .doesNotContain("ENTWURF");
+    }
+
+    private static String pdfText(byte[] pdf) throws Exception {
+        try (var doc = org.apache.pdfbox.Loader.loadPDF(pdf)) {
+            return new org.apache.pdfbox.text.PDFTextStripper().getText(doc).replace(' ', ' ');
+        }
     }
 
     @Test
