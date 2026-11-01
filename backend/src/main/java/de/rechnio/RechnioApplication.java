@@ -15,7 +15,9 @@ public class RechnioApplication {
         // Gestartet im Projektordner (z. B. IntelliJ ohne Arbeitsverzeichnis "backend"): dieselbe Datenbank
         // wie bei "cd backend && mvn spring-boot:run" verwenden statt einer neuen, leeren unter ./data.
         if (System.getProperty("rechnio.data-dir") == null && Files.exists(Path.of("backend", "pom.xml"))) {
-            System.setProperty("rechnio.data-dir", Path.of("backend", "data").toString());
+            // H2 verlangt absolute Pfade oder ./name
+            System.setProperty("rechnio.data-dir",
+                    Path.of("backend", "data").toAbsolutePath().toString().replace('\\', '/'));
         }
         SpringApplication.run(RechnioApplication.class, args);
     }
