@@ -12,7 +12,7 @@
   }
   body { font-family: 'Rechnio Sans'; font-size: 9.5pt; color: #16233b; line-height: 1.35; }
   .letterhead { height: 25mm; position: relative; }
-  .letterhead .logo { position: absolute; top: 0; right: 0; max-width: 60mm; max-height: 20mm; }
+  .letterhead .logo { position: absolute; top: 0; right: 0; }
   .letterhead .name { font-size: 16pt; font-weight: bold; }
   .letterhead .addr { color: #5b6678; }
   .window { position: absolute; top: 25mm; left: 0; width: 85mm; height: 45mm; }
@@ -45,7 +45,7 @@
   </div>
 
   <div class="letterhead">
-    <img class="logo" th:if="${letter.logoDataUri}" th:src="${letter.logoDataUri}" alt="Logo"/>
+    <img class="logo" th:if="${letter.logoDataUri}" th:src="${letter.logoDataUri}" th:style="${letter.logoStyle}" alt="Logo"/>
     <div class="name" th:text="${letter.senderName}">Firma</div>
     <div class="addr" th:text="${letter.senderLine}">Straße · PLZ Ort</div>
   </div>
