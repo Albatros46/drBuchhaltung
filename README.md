@@ -129,6 +129,21 @@ und die Mails unter http://localhost:8025 ansehen. Es wird nichts an echte Empf�
 | `MAIL_AUTH`, `MAIL_STARTTLS` | `true`, `true` |
 | `MAIL_FROM` | Absender, den der Anbieter erlaubt (die Firmen-E-Mail wird als Reply-To gesetzt) |
 
+## Mahnwesen
+
+| Stufe | Frist | Gebühr |
+|---|---|---|
+| Zahlungserinnerung | 10 Tage | keine |
+| 1. Mahnung | 7 Tage | Mahngebühr aus *Firma → Mahnwesen* |
+| 2. Mahnung | 7 Tage | Mahngebühr |
+
+- Nur für offene, überfällige Rechnungen; die nächste Stufe erst nach Ablauf der Frist der vorherigen.
+- Jede Stufe als DIN-5008-PDF mit Rechnungsbezug, Gebühren und offenem Gesamtbetrag; Versand per E-Mail.
+- Nach der 2. Mahnung keine weitere Stufe: gerichtliches Mahnverfahren o. Ä. außerhalb der App.
+- Verzugszinsen werden nicht berechnet; Mahngebühren erscheinen nicht im DATEV-Export.
+- API: `GET/POST /api/invoices/{id}/dunnings`, `GET /api/dunnings/{id}/pdf`, `GET /api/dunnings/{id}/email`,
+  `POST /api/dunnings/{id}/send`.
+
 ## Tests
 
 ```bash
@@ -142,7 +157,7 @@ mvn test
 - Aufwandskonto je Eingangsrechnung wählbar; § 13b bei Eingangsrechnungen
 - DATEV-Stammdatenexport (Debitoren/Kreditoren)
 - E-Rechnungen per E-Mail empfangen (Postfach-Abruf)
-- Mahnungen
+- Verzugszinsen und Mahngebühren im DATEV-Export
 - Belege scannen (OCR)
 
 ## Produktion (später)
