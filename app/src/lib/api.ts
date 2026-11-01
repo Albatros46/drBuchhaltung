@@ -130,6 +130,23 @@ export interface DraftInput {
 
 export type EInvoiceFormat = 'ZUGFERD' | 'XRECHNUNG_CII' | 'XRECHNUNG_UBL' | 'CII' | 'UBL';
 
+export type ExpenseCategory = string;
+
+/** Waehlbare Kontierung mit den Konten im Kontenrahmen der Firma. */
+export interface ExpenseCategoryOption {
+  code: ExpenseCategory;
+  label: string;
+  accounts: string;
+  taxNote: string;
+}
+
+export interface ExpenseInput {
+  category: ExpenseCategory;
+  account?: number;
+  buKey?: string;
+  rememberForSupplier: boolean;
+}
+
 export interface IncomingInvoice {
   id: string;
   format: EInvoiceFormat;
@@ -158,6 +175,15 @@ export interface IncomingInvoice {
   receivedAt: string;
   /** DATEV-Kreditorenkonto des Lieferanten (70000 + Lieferantennummer) */
   kreditorAccount: number | null;
+  /** Kontierung fuer den DATEV-Export; chosen = false heisst Vorschlag */
+  expense: {
+    category: ExpenseCategory;
+    label: string;
+    accounts: string;
+    buKey: string | null;
+    chosen: boolean;
+    reverseCharge: boolean;
+  };
   lines: {
     position: number;
     description: string | null;
@@ -269,6 +295,10 @@ export const api = {
   incomingInvoice: (t: string, id: string) => request<IncomingInvoice>(`/api/incoming-invoices/${id}`, t),
   markIncomingPaid: (t: string, id: string) =>
     request<IncomingInvoice>(`/api/incoming-invoices/${id}/paid`, t, { method: 'POST' }),
+  expenseCategories: (t: string) =>
+    request<ExpenseCategoryOption[]>('/api/incoming-invoices/expense-categories', t),
+  assignExpense: (t: string, id: string, e: ExpenseInput) =>
+    request<IncomingInvoice>(`/api/incoming-invoices/${id}/expense`, t, { method: 'PUT', body: JSON.stringify(e) }),
   uploadIncoming: (t: string, f: PickedFile) => uploadFile<IncomingInvoice>(t, '/api/incoming-invoices', f),
 
   logo: async (t: string): Promise<Logo | null> => (await request<Logo | undefined>('/api/organization/logo', t)) ?? null,

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
 import { ActionButton, AmountRow, ErrorBox, Screen } from '@/components/app-ui';
+import { ExpenseCard } from '@/components/expense-card';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -79,6 +80,8 @@ export default function IncomingInvoiceScreen() {
       </Card>
 
       <ValidationCard inv={inv} />
+
+      <ExpenseCard token={token} inv={inv} onSaved={setInv} />
 
       <Card>
         <CardHeader>
