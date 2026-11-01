@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -194,6 +195,51 @@ class IncomingInvoiceIntegrationTest {
         // Gutschrift des Lieferanten: Kreditor im Soll
         assertThat(csv).contains("880,56;\"S\";\"EUR\";;;\"\";70001;3400;");
         assertThat(csv).contains("\"Yilmaz Fliesenbau\"", "\"Holz Meier KG\"");
+    }
+
+    @Test
+    void datevStammdatenListsDebitorsAndKreditors() throws Exception {
+        String buyer = register();
+        call(buyer, put("/api/organization"), """
+                {"name":"Käufer GmbH","street":"Weg 1","zip":"10115","city":"Berlin","steuernummer":"11/111/11111",
+                 "kontenrahmen":"SKR04","datevBeraterNr":1001,"datevMandantNr":7}
+                """).andExpect(status().isOk());
+        call(buyer, post("/api/customers"), """
+                {"name":"Café Süß \\"Am Markt\\"","street":"Marktplatz 3","zip":"50667","city":"Köln",
+                 "email":"info@cafe.example","ustId":"DE 111 222 333"}
+                """).andExpect(status().isCreated());
+        upload(buyer, "a.xml", supplier().xrechnung()).andExpect(status().isCreated());
+
+        byte[] bytes = call(buyer, get("/api/exports/datev/stammdaten"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"EXTF_Debitoren_Kreditoren.csv\""))
+                .andReturn().getResponse().getContentAsByteArray();
+        String[] rows = new String(bytes, java.nio.charset.Charset.forName("windows-1252")).split("\r\n");
+
+        assertThat(rows).hasSize(2 + 2);
+        assertThat(rows[0]).startsWith("\"EXTF\";700;16;\"Debitoren/Kreditoren\";5;").contains(";1001;7;").contains("\"04\"");
+        assertThat(rows[1].split(";", -1)).hasSize(254).startsWith("Konto", "Name (Adressatentyp Unternehmen)");
+
+        String[] debitor = rows[2].split(";", -1);
+        assertThat(debitor).hasSize(254);
+        assertThat(debitor[0]).isEqualTo("10001");
+        assertThat(debitor[5]).isEqualTo("\"Café Süß \"\"Am Markt\"\"\"");
+        assertThat(debitor[6]).isEqualTo("0");
+        assertThat(debitor[7]).as("Kurzbezeichnung max. 15 Zeichen").isEqualTo("\"Café Süß \"\"Am Ma\"");
+        assertThat(debitor[8]).isEqualTo("\"DE\"");
+        assertThat(debitor[9]).isEqualTo("\"111222333\"");
+        assertThat(debitor[15]).isEqualTo("\"Marktplatz 3\"");
+        assertThat(debitor[17]).isEqualTo("\"50667\"");
+        assertThat(debitor[32]).isEqualTo("\"info@cafe.example\"");
+        assertThat(debitor[98]).isEqualTo("\"1\"");
+
+        String[] kreditor = rows[3].split(";", -1);
+        assertThat(kreditor).hasSize(254);
+        assertThat(kreditor[0]).isEqualTo("70001");
+        assertThat(kreditor[5]).isEqualTo("\"Yilmaz Fliesenbau\"");
+        assertThat(kreditor[15]).as("Anschrift aus der Eingangsrechnung").isNotEqualTo("\"\"");
+        assertThat(kreditor[44]).as("IBAN aus der Eingangsrechnung").startsWith("\"DE");
+        assertThat(kreditor[48]).isEqualTo("1");
     }
 
     @Test

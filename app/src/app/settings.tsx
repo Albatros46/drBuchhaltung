@@ -28,19 +28,17 @@ export default function SettingsScreen() {
   const year = new Date().getFullYear();
   const [exportYear, setExportYear] = useState(year);
 
-  const downloadDatev = async () => {
+  const download = async (path: string, filename: string) => {
     setError(null);
     try {
-      await openDocument(
-        token,
-        `/api/exports/datev?from=${exportYear}-01-01&to=${exportYear}-12-31`,
-        `EXTF_Buchungsstapel_${exportYear}.csv`,
-        'text/csv',
-      );
+      await openDocument(token, path, filename, 'text/csv');
     } catch (e) {
       setError(e as ApiError);
     }
   };
+  const downloadDatev = () =>
+    download(`/api/exports/datev?from=${exportYear}-01-01&to=${exportYear}-12-31`, `EXTF_Buchungsstapel_${exportYear}.csv`);
+  const downloadStammdaten = () => download('/api/exports/datev/stammdaten', 'EXTF_Debitoren_Kreditoren.csv');
 
   useEffect(() => {
     api
@@ -185,7 +183,8 @@ export default function SettingsScreen() {
         <CardHeader>
           <CardTitle>DATEV-Export</CardTitle>
           <CardDescription>
-            Buchungsstapel mit Ausgangs- und Eingangsrechnungen für Ihren Steuerberater. Vorher speichern, damit
+            Buchungsstapel mit Ausgangs- und Eingangsrechnungen für Ihren Steuerberater. Die Stammdaten legen die
+            Personenkonten mit Name, Anschrift, USt-IdNr. und IBAN an; zuerst importieren. Vorher speichern, damit
             Kontenrahmen und Nummern im Export stehen.
           </CardDescription>
         </CardHeader>
@@ -200,6 +199,12 @@ export default function SettingsScreen() {
             variant="outline"
             disabled={busy}
             onPress={downloadDatev}
+          />
+          <ActionButton
+            title="Stammdaten (Debitoren/Kreditoren) herunterladen"
+            variant="outline"
+            disabled={busy}
+            onPress={downloadStammdaten}
           />
         </CardContent>
       </Card>

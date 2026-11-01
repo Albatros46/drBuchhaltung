@@ -23,6 +23,9 @@ cd backend
 mvn spring-boot:run
 ```
 
+In IntelliJ in der Run-Konfiguration *Working directory* auf `backend` setzen (`$MODULE_WORKING_DIR$`).
+Sonst legt H2 eine neue, leere Datenbank unter `data/` im Projektordner an.
+
 **App** (zweites Terminal):
 
 ```bash
@@ -87,6 +90,7 @@ de.rechnio
 | GET | `/api/incoming-invoices/{id}/original` | Unveränderte Originaldatei |
 | GET/PUT | `/api/incoming-invoices/expense-categories`, `/api/incoming-invoices/{id}/expense` | Kontierung (Gegenkonto für DATEV) |
 | GET | `/api/exports/datev?from=2026-01-01&to=2026-12-31` | DATEV-Buchungsstapel (EXTF CSV) |
+| GET | `/api/exports/datev/stammdaten` | DATEV-Stammdaten Debitoren/Kreditoren (EXTF CSV) |
 
 ## Fachliche Regeln
 
@@ -99,8 +103,11 @@ de.rechnio
   - Eingang: Kreditor `70000 + Lieferantennummer` (Haben) an das Gegenkonto der Kontierung (siehe unten);
     Gutschriften der Lieferanten im Soll. Lieferanten werden über USt-IdNr., Steuernummer oder Namen
     wiedererkannt und behalten ihre Nummer.
-  - Kreditoren- und Debitoren-Stammdaten werden nicht mitexportiert; DATEV legt fehlende Personenkonten
-    beim Import an oder der Steuerberater ergänzt sie.
+  - Stammdaten getrennt: `GET /api/exports/datev/stammdaten` liefert alle Debitoren und Kreditoren im
+    DATEV-Format *Debitoren/Kreditoren* (EXTF, Kategorie 16, Version 5, 254 Felder) mit Name, Kurzbezeichnung,
+    USt-IdNr., Anschrift, E-Mail, IBAN und Kunden-/Lieferantennummer. Lieferanten-Anschrift und IBAN stammen
+    aus der zuletzt eingegangenen Rechnung. Adressatentyp ist „keine Angabe“, da Rechnio Firmen und
+    Privatpersonen nicht unterscheidet. Vor dem Buchungsstapel importieren.
   **Vor dem produktiven Einsatz einmal mit dem Steuerberater probeweise in DATEV importieren.**
 
 ### Kontierung von Eingangsrechnungen
@@ -185,7 +192,6 @@ mvn test
 ## Noch offen
 
 - Eingangsrechnungen mit gemischter Kontierung (verschiedene Aufwandskonten je Position)
-- DATEV-Stammdatenexport (Debitoren/Kreditoren)
 - E-Rechnungen per E-Mail empfangen (Postfach-Abruf)
 - Verzugszinsen und Mahngebühren im DATEV-Export
 - Belege scannen (OCR)
