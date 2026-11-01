@@ -63,7 +63,10 @@ class IncomingInvoiceIntegrationTest {
         assertThat(in.get("grossTotal").decimalValue()).isEqualByComparingTo(GROSS);
         assertThat(in.get("lines")).hasSize(3);
         assertThat(in.get("lines").get(0).get("description").asText()).isEqualTo("Fliesen verlegen");
-        assertThat(in.get("lines").get(0).get("unit").asText()).isEqualTo("MTK");
+        assertThat(in.get("lines").get(0).get("unit").asText()).isEqualTo("m²");
+        assertThat(in.get("lines").get(0).get("unitCode").asText()).isEqualTo("MTK");
+        assertThat(in.get("lines").get(1).get("unit").asText()).isEqualTo("kg");
+        assertThat(in.get("lines").get(2).get("unit").asText()).as("Pausch. -> LS -> Pauschale").isEqualTo("Pauschale");
         assertThat(in.get("validationStatus").asText()).isEqualTo("VALID");
     }
 

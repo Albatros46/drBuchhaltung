@@ -13,6 +13,7 @@ import de.rechnio.enums.EInvoiceFormat;
 import de.rechnio.enums.ExpenseCategory;
 import de.rechnio.enums.Kontenrahmen;
 import de.rechnio.util.Kontierung;
+import de.rechnio.util.UnitCodes;
 import de.rechnio.enums.IncomingDocType;
 import de.rechnio.enums.IncomingStatus;
 import de.rechnio.enums.ValidationStatus;
@@ -38,12 +39,16 @@ public record IncomingInvoiceResponse(UUID id, EInvoiceFormat format, IncomingDo
                           boolean reverseCharge) {
     }
 
-    public record Line(int position, String description, BigDecimal quantity, String unit, BigDecimal unitPrice,
-                       BigDecimal vatRate, BigDecimal netAmount) {
+    /**
+     * @param unit     lesbare Einheit (z. B. "m²")
+     * @param unitCode UN/ECE-Code aus der E-Rechnung (z. B. "MTK")
+     */
+    public record Line(int position, String description, BigDecimal quantity, String unit, String unitCode,
+                       BigDecimal unitPrice, BigDecimal vatRate, BigDecimal netAmount) {
 
         static Line from(IncomingInvoiceLine l) {
-            return new Line(l.getPosition(), l.getDescription(), l.getQuantity(), l.getUnit(), l.getUnitPrice(),
-                    l.getVatRate(), l.getNetAmount());
+            return new Line(l.getPosition(), l.getDescription(), l.getQuantity(), UnitCodes.label(l.getUnit()),
+                    l.getUnit(), l.getUnitPrice(), l.getVatRate(), l.getNetAmount());
         }
     }
 

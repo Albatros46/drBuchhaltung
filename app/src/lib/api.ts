@@ -188,7 +188,10 @@ export interface IncomingInvoice {
     position: number;
     description: string | null;
     quantity: number | null;
+    /** lesbare Einheit, z. B. "m²" */
     unit: string | null;
+    /** UN/ECE-Code aus der E-Rechnung, z. B. "MTK" */
+    unitCode: string | null;
     unitPrice: number | null;
     vatRate: number | null;
     netAmount: number | null;
