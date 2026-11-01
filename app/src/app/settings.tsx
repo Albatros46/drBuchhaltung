@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { ActionButton, Chip, ErrorBox, Field, Screen } from '@/components/app-ui';
+import { LogoCard } from '@/components/logo-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -116,6 +117,8 @@ export default function SettingsScreen() {
           </View>
         </CardContent>
       </Card>
+
+      <LogoCard token={token} />
 
       <Card>
         <CardHeader>

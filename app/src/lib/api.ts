@@ -169,6 +169,13 @@ export interface IncomingInvoice {
   }[];
 }
 
+/** Firmenlogo; dataUri kann direkt als Bildquelle verwendet werden. */
+export interface Logo {
+  dataUri: string;
+  width: number;
+  height: number;
+}
+
 /** Datei aus dem Dokumenten-Picker: auf dem Handy per URI, im Browser als File-Objekt. */
 export interface PickedFile {
   uri: string;
@@ -262,10 +269,15 @@ export const api = {
   incomingInvoice: (t: string, id: string) => request<IncomingInvoice>(`/api/incoming-invoices/${id}`, t),
   markIncomingPaid: (t: string, id: string) =>
     request<IncomingInvoice>(`/api/incoming-invoices/${id}/paid`, t, { method: 'POST' }),
-  uploadIncoming: (t: string, f: PickedFile) => uploadIncoming(t, f),
+  uploadIncoming: (t: string, f: PickedFile) => uploadFile<IncomingInvoice>(t, '/api/incoming-invoices', f),
+
+  logo: async (t: string): Promise<Logo | null> => (await request<Logo | undefined>('/api/organization/logo', t)) ?? null,
+  uploadLogo: (t: string, f: PickedFile) => uploadFile<Logo>(t, '/api/organization/logo', f),
+  deleteLogo: (t: string) => request<void>('/api/organization/logo', t, { method: 'DELETE' }),
 };
 
-async function uploadIncoming(token: string, picked: PickedFile): Promise<IncomingInvoice> {
+/** Laedt eine ausgewaehlte Datei als multipart/form-data (Feld "file") hoch. */
+async function uploadFile<T>(token: string, path: string, picked: PickedFile): Promise<T> {
   const form = new FormData();
   if (Platform.OS === 'web' && picked.file) {
     form.append('file', picked.file, picked.name);
@@ -276,7 +288,7 @@ async function uploadIncoming(token: string, picked: PickedFile): Promise<Incomi
   let res: Response;
   try {
     // Content-Type nicht setzen: fetch ergaenzt die multipart-Boundary selbst
-    res = await fetch(`${API_URL}/api/incoming-invoices`, {
+    res = await fetch(`${API_URL}${path}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: form,
@@ -286,5 +298,5 @@ async function uploadIncoming(token: string, picked: PickedFile): Promise<Incomi
   }
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new ApiError(body.message ?? `Fehler ${res.status}`, res.status, body.errors ?? []);
-  return body as IncomingInvoice;
+  return body as T;
 }
