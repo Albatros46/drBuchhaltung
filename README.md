@@ -39,6 +39,16 @@ set EXPO_PUBLIC_API_URL=http://192.168.0.10:8080
 
 Erster Ablauf in der App: Konto erstellen → Firma und Steuer ausfüllen (Anschrift, Steuernummer) → Kunde anlegen → Neue Rechnung → Ausstellen.
 
+### Beispieldaten
+
+Bei laufendem Backend füllt `node scripts/seed-demo.mjs` die lokale Datenbank über die API:
+10 Kunden, 10 überfällige Rechnungen mit Zahlungserinnerung, bezahlte und offene Rechnungen, ein Storno,
+Angebote, Entwürfe sowie 10 Lieferanten-Konten, deren XRechnungen bzw. ZUGFeRD-PDFs als
+Eingangsrechnungen (mit Kontierung) beim Demo-Konto eingehen. Alle Firmen und Adressen sind erfunden.
+Zugangsdaten stehen oben im Skript; ein zweiter Lauf legt nichts doppelt an.
+Hinweis: Rechnungen werden immer mit dem heutigen Datum ausgestellt; die überfälligen haben daher ein
+Fälligkeitsdatum vor dem Rechnungsdatum.
+
 ## Backend-Struktur
 
 ```
