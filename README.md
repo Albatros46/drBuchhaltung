@@ -75,6 +75,7 @@ de.rechnio
 | GET | `/api/incoming-invoices`, `/api/incoming-invoices/{id}` | Eingangsrechnungen |
 | POST | `/api/incoming-invoices/{id}/paid` | Eingangsrechnung als bezahlt markieren |
 | GET | `/api/incoming-invoices/{id}/original` | Unveränderte Originaldatei |
+| GET/PUT | `/api/incoming-invoices/expense-categories`, `/api/incoming-invoices/{id}/expense` | Kontierung (Gegenkonto für DATEV) |
 | GET | `/api/exports/datev?from=2026-01-01&to=2026-12-31` | DATEV-Buchungsstapel (EXTF CSV) |
 
 ## Fachliche Regeln
@@ -85,14 +86,33 @@ de.rechnio
 - § 19 (Kleinunternehmer) und § 13b (Reverse-Charge) setzen den Steuersatz auf 0 % und liefern den Pflichthinweis.
 - DATEV-Export (ein Buchungsstapel für Rechnungsausgang und -eingang, je Steuersatz eine Buchung):
   - Ausgang: Debitor `10000 + Kundennummer` (Soll) an Erlös-Automatikkonto (SKR03 8400/8300, SKR04 4400/4300).
-  - Eingang: Kreditor `70000 + Lieferantennummer` (Haben) an Wareneingang (SKR03 3400/3300/3200,
-    SKR04 5400/5300/5200); Gutschriften der Lieferanten im Soll. Lieferanten werden über USt-IdNr.,
-    Steuernummer oder Namen wiedererkannt und behalten ihre Nummer.
-  - Wareneingang ist ein Vorschlag: Dienstleistungen, Miete o. Ä. kontiert der Steuerberater um.
-    Eingehende Reverse-Charge-Rechnungen (§ 13b) werden noch nicht gesondert gebucht.
+  - Eingang: Kreditor `70000 + Lieferantennummer` (Haben) an das Gegenkonto der Kontierung (siehe unten);
+    Gutschriften der Lieferanten im Soll. Lieferanten werden über USt-IdNr., Steuernummer oder Namen
+    wiedererkannt und behalten ihre Nummer.
   - Kreditoren- und Debitoren-Stammdaten werden nicht mitexportiert; DATEV legt fehlende Personenkonten
     beim Import an oder der Steuerberater ergänzt sie.
   **Vor dem produktiven Einsatz einmal mit dem Steuerberater probeweise in DATEV importieren.**
+
+### Kontierung von Eingangsrechnungen
+
+Jede Eingangsrechnung hat eine Kontierung, die das Gegenkonto im DATEV-Export bestimmt
+(App: Eingangsrechnung → *Kontierung ändern*).
+
+- Vorschlag ohne Auswahl: Wareneingang (Automatikkonten SKR03 3400/3300/3200, SKR04 5400/5300/5200).
+- Wählbar sind u. a. Fremdleistungen, Miete, Bürobedarf, Porto, Telefon, Software, Kfz, Reisekosten,
+  Werbung, Versicherungen, Fortbildung, Reparaturen, Beratung, Buchführung, Bankgebühren und GWG.
+  Diese Konten sind keine Automatikkonten: die Vorsteuer kommt über den BU-Schlüssel (9 = 19 %, 8 = 7 %);
+  Versicherungen und Bankgebühren werden ohne Vorsteuer gebucht.
+- **§ 13b:** Eingangsrechnungen mit Steuerkategorie *AE* werden als Reverse Charge erkannt und auf das
+  Automatikkonto gebucht (inländischer Bauleistender SKR03 3120 / SKR04 5920, EU-Ausland 3123 / 5923).
+- **Eigenes Konto:** beliebige Kontonummer mit optionalem BU-Schlüssel, wenn keine Kategorie passt.
+- *Für diesen Lieferanten merken* übernimmt die Wahl für künftige Rechnungen desselben Lieferanten
+  (nicht bei Reverse Charge). Jede Änderung steht im `audit_log`.
+- API: `GET /api/incoming-invoices/expense-categories`, `PUT /api/incoming-invoices/{id}/expense`
+  mit `{"category":"BUEROBEDARF","rememberForSupplier":true}` bzw. `{"category":"CUSTOM","account":4980,"buKey":"9"}`.
+
+**Die Kontenzuordnung ist ein Vorschlag, vor allem im SKR04. Bitte vor dem ersten Export mit dem
+Steuerberater abstimmen** und ggf. *Eigenes Konto* verwenden.
 
 ## E-Rechnung
 
@@ -154,7 +174,7 @@ mvn test
 
 ## Noch offen
 
-- Aufwandskonto je Eingangsrechnung wählbar; § 13b bei Eingangsrechnungen
+- Eingangsrechnungen mit gemischter Kontierung (verschiedene Aufwandskonten je Position)
 - DATEV-Stammdatenexport (Debitoren/Kreditoren)
 - E-Rechnungen per E-Mail empfangen (Postfach-Abruf)
 - Verzugszinsen und Mahngebühren im DATEV-Export
