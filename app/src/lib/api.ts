@@ -30,6 +30,8 @@ export interface Organization {
   email?: string | null;
   contactName?: string | null;
   phone?: string | null;
+  /** Mahngebuehr ab der 1. Mahnung */
+  dunningFee?: number | null;
   datevBeraterNr?: number | null;
   datevMandantNr?: number | null;
 }
@@ -78,6 +80,31 @@ export interface Invoice {
 }
 
 export type MailAttachment = 'ZUGFERD' | 'PDF' | 'XRECHNUNG';
+
+export type DunningLevel = 'ZAHLUNGSERINNERUNG' | 'MAHNUNG_1' | 'MAHNUNG_2';
+
+export interface Dunning {
+  id: string;
+  invoiceId: string;
+  level: DunningLevel;
+  title: string;
+  issueDate: string;
+  deadline: string;
+  openAmount: number;
+  fee: number;
+  totalFees: number;
+  totalDue: number;
+  sentAt: string | null;
+  sentTo: string | null;
+}
+
+/** E-Mail-Entwurf; attachment nur bei Rechnungen (Mahnungen gehen immer als PDF). */
+export interface MailDraft {
+  to: string;
+  subject: string;
+  message: string;
+  attachment?: MailAttachment;
+}
 
 export interface InvoiceMail {
   to: string;
@@ -223,6 +250,13 @@ export const api = {
   emailDraft: (t: string, id: string) => request<InvoiceMail>(`/api/invoices/${id}/email`, t),
   sendInvoice: (t: string, id: string, mail: InvoiceMail) =>
     request<Invoice>(`/api/invoices/${id}/send`, t, { method: 'POST', body: json(mail) }),
+
+  dunnings: (t: string, invoiceId: string) => request<Dunning[]>(`/api/invoices/${invoiceId}/dunnings`, t),
+  createDunning: (t: string, invoiceId: string) =>
+    request<Dunning>(`/api/invoices/${invoiceId}/dunnings`, t, { method: 'POST' }),
+  dunningEmailDraft: (t: string, id: string) => request<MailDraft>(`/api/dunnings/${id}/email`, t),
+  sendDunning: (t: string, id: string, mail: MailDraft) =>
+    request<Dunning>(`/api/dunnings/${id}/send`, t, { method: 'POST', body: json(mail) }),
 
   incomingInvoices: (t: string) => request<IncomingInvoice[]>('/api/incoming-invoices', t),
   incomingInvoice: (t: string, id: string) => request<IncomingInvoice>(`/api/incoming-invoices/${id}`, t),

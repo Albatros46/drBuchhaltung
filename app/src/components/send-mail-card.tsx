@@ -4,17 +4,31 @@ import { View } from 'react-native';
 import { ActionButton, Chip, ErrorBox, Field } from '@/components/app-ui';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
-import { api, ApiError, Invoice, InvoiceMail, MailAttachment } from '@/lib/api';
+import { ApiError, MailAttachment, MailDraft } from '@/lib/api';
 
-const ATTACHMENTS: { value: MailAttachment; label: string }[] = [
-  { value: 'ZUGFERD', label: 'ZUGFeRD-PDF' },
-  { value: 'PDF', label: 'PDF' },
-  { value: 'XRECHNUNG', label: 'XRechnung' },
-];
+export const ATTACHMENT_LABEL: Record<MailAttachment, string> = {
+  ZUGFERD: 'ZUGFeRD-PDF',
+  PDF: 'PDF',
+  XRECHNUNG: 'XRechnung',
+};
 
-/** Versand eines ausgestellten Belegs per E-Mail; der Vorschlag kommt vom Backend. */
-export function SendMailCard({ token, inv, onSent }: { token: string; inv: Invoice; onSent: (i: Invoice) => void }) {
-  const [mail, setMail] = useState<InvoiceMail | null>(null);
+interface Props {
+  title?: string;
+  sentAt: string | null;
+  sentTo: string | null;
+  /** Vorschlag vom Backend (Empfaenger, Betreff, Text, ggf. Anhang). */
+  loadDraft: () => Promise<MailDraft>;
+  /** Sendet und liefert den neuen Versandvermerk. */
+  send: (mail: MailDraft) => Promise<{ sentAt: string | null; sentTo: string | null }>;
+  /** Waehlbare Anhaenge; ohne Angabe wird keine Auswahl angezeigt. */
+  attachmentOptions?: MailAttachment[];
+  /** Ohne eigene Karte, z. B. innerhalb der Mahnwesen-Karte. */
+  embedded?: boolean;
+}
+
+/** E-Mail-Versand eines Belegs: Vorschlag laden, bearbeiten, senden. */
+export function SendMailCard({ title = 'Per E-Mail senden', sentAt, sentTo, loadDraft, send, attachmentOptions, embedded }: Props) {
+  const [mail, setMail] = useState<MailDraft | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [sentInfo, setSentInfo] = useState<string | null>(null);
@@ -24,7 +38,7 @@ export function SendMailCard({ token, inv, onSent }: { token: string; inv: Invoi
     setSentInfo(null);
     setBusy(true);
     try {
-      setMail(await api.emailDraft(token, inv.id));
+      setMail(await loadDraft());
     } catch (e) {
       setError(e as ApiError);
     } finally {
@@ -32,15 +46,14 @@ export function SendMailCard({ token, inv, onSent }: { token: string; inv: Invoi
     }
   };
 
-  const send = async () => {
+  const submit = async () => {
     if (!mail) return;
     setError(null);
     setBusy(true);
     try {
-      const updated = await api.sendInvoice(token, inv.id, mail);
+      const result = await send(mail);
       setMail(null);
-      setSentInfo(`Gesendet an ${updated.sentTo}`);
-      onSent(updated);
+      setSentInfo(`Gesendet an ${result.sentTo}`);
     } catch (e) {
       setError(e as ApiError);
     } finally {
@@ -48,60 +61,72 @@ export function SendMailCard({ token, inv, onSent }: { token: string; inv: Invoi
     }
   };
 
-  const set = (patch: Partial<InvoiceMail>) => setMail((m) => (m ? { ...m, ...patch } : m));
-  const options = inv.docType === 'ANGEBOT' ? ATTACHMENTS.filter((a) => a.value === 'PDF') : ATTACHMENTS;
+  const set = (patch: Partial<MailDraft>) => setMail((m) => (m ? { ...m, ...patch } : m));
+  const status = sentAt
+    ? `Zuletzt gesendet am ${new Date(sentAt).toLocaleString('de-DE')} an ${sentTo}`
+    : 'Noch nicht verschickt.';
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Per E-Mail senden</CardTitle>
-        <CardDescription>
-          {inv.sentAt
-            ? `Zuletzt gesendet am ${new Date(inv.sentAt).toLocaleString('de-DE')} an ${inv.sentTo}`
-            : 'Noch nicht verschickt.'}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="gap-3">
-        {sentInfo && <Text className="font-semibold text-primary">{sentInfo}</Text>}
-        {!mail ? (
-          <ActionButton title={inv.sentAt ? 'Erneut senden' : 'E-Mail vorbereiten'} variant="outline" busy={busy} onPress={open} />
-        ) : (
-          <>
-            <Field
-              label="An (mehrere durch Komma trennen)"
-              value={mail.to}
-              onChangeText={(to) => set({ to })}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              placeholder="kunde@firma.de"
-            />
-            <Field label="Betreff" value={mail.subject} onChangeText={(subject) => set({ subject })} />
-            <Field
-              label="Nachricht"
-              value={mail.message}
-              onChangeText={(message) => set({ message })}
-              multiline
-              numberOfLines={10}
-              className="flex-none"
-              inputClassName="h-56 items-start py-2 sm:h-56"
-              textAlignVertical="top"
-            />
+  const body = (
+    <View className="gap-3">
+      {sentInfo && <Text className="font-semibold text-primary">{sentInfo}</Text>}
+      {!mail ? (
+        <ActionButton title={sentAt ? 'Erneut senden' : 'E-Mail vorbereiten'} variant="outline" busy={busy} onPress={open} />
+      ) : (
+        <>
+          <Field
+            label="An (mehrere durch Komma trennen)"
+            value={mail.to}
+            onChangeText={(to) => set({ to })}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            placeholder="kunde@firma.de"
+          />
+          <Field label="Betreff" value={mail.subject} onChangeText={(subject) => set({ subject })} />
+          <Field
+            label="Nachricht"
+            value={mail.message}
+            onChangeText={(message) => set({ message })}
+            multiline
+            numberOfLines={10}
+            className="flex-none"
+            inputClassName="h-56 items-start py-2 sm:h-56"
+            textAlignVertical="top"
+          />
+          {attachmentOptions && attachmentOptions.length > 0 && (
             <View className="gap-1.5">
               <Text variant="small">Anhang</Text>
               <View className="flex-row flex-wrap gap-2">
-                {options.map((o) => (
-                  <Chip key={o.value} label={o.label} active={mail.attachment === o.value} onPress={() => set({ attachment: o.value })} />
+                {attachmentOptions.map((o) => (
+                  <Chip key={o} label={ATTACHMENT_LABEL[o]} active={mail.attachment === o} onPress={() => set({ attachment: o })} />
                 ))}
               </View>
             </View>
-            <View className="flex-row gap-2">
-              <ActionButton title="Senden" className="flex-1" busy={busy} onPress={send} />
-              <ActionButton title="Abbrechen" variant="outline" className="flex-1" disabled={busy} onPress={() => setMail(null)} />
-            </View>
-          </>
-        )}
-        <ErrorBox message={error?.message ?? null} errors={error?.errors} />
-      </CardContent>
+          )}
+          <View className="flex-row gap-2">
+            <ActionButton title="Senden" className="flex-1" busy={busy} onPress={submit} />
+            <ActionButton title="Abbrechen" variant="outline" className="flex-1" disabled={busy} onPress={() => setMail(null)} />
+          </View>
+        </>
+      )}
+      <ErrorBox message={error?.message ?? null} errors={error?.errors} />
+    </View>
+  );
+
+  if (embedded) {
+    return (
+      <View className="gap-2">
+        <Text variant="muted">{status}</Text>
+        {body}
+      </View>
+    );
+  }
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{status}</CardDescription>
+      </CardHeader>
+      <CardContent>{body}</CardContent>
     </Card>
   );
 }

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
 import { ActionButton, AmountRow, ErrorBox, Screen, StatusPill } from '@/components/app-ui';
+import { DunningCard } from '@/components/dunning-card';
 import { SendMailCard } from '@/components/send-mail-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -117,7 +118,24 @@ export default function InvoiceDetailScreen() {
         }
       />
 
-      {inv.status !== 'DRAFT' && <SendMailCard token={token} inv={inv} onSent={setInv} />}
+      {inv.status !== 'DRAFT' && (
+        <SendMailCard
+          sentAt={inv.sentAt}
+          sentTo={inv.sentTo}
+          attachmentOptions={inv.docType === 'ANGEBOT' ? ['PDF'] : ['ZUGFERD', 'PDF', 'XRECHNUNG']}
+          loadDraft={() => api.emailDraft(token, inv.id)}
+          send={async (mail) => {
+            const updated = await api.sendInvoice(token, inv.id, {
+              ...mail,
+              attachment: mail.attachment ?? 'PDF',
+            });
+            setInv(updated);
+            return updated;
+          }}
+        />
+      )}
+
+      {inv.docType === 'RECHNUNG' && inv.status !== 'DRAFT' && <DunningCard token={token} inv={inv} />}
 
       {inv.docType !== 'ANGEBOT' && inv.status !== 'DRAFT' && (
         <Card>

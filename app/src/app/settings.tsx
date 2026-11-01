@@ -9,6 +9,7 @@ import { Text } from '@/components/ui/text';
 import { api, ApiError, Organization } from '@/lib/api';
 import { useToken } from '@/lib/auth';
 import { openDocument } from '@/lib/download';
+import { parseDecimal } from '@/lib/format';
 
 const text = (v: string | null | undefined) => v ?? '';
 const orNull = (v: string) => (v.trim() ? v.trim() : null);
@@ -18,6 +19,7 @@ export default function SettingsScreen() {
   const token = useToken();
   const [org, setOrg] = useState<Organization | null>(null);
   const [berater, setBerater] = useState('');
+  const [fee, setFee] = useState('');
   const [mandant, setMandant] = useState('');
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -45,6 +47,7 @@ export default function SettingsScreen() {
       .then((o) => {
         setOrg(o);
         setBerater(o.datevBeraterNr?.toString() ?? '');
+        setFee(o.dunningFee ? o.dunningFee.toFixed(2).replace('.', ',') : '');
         setMandant(o.datevMandantNr?.toString() ?? '');
       })
       .catch((e: ApiError) => setError(e));
@@ -64,11 +67,17 @@ export default function SettingsScreen() {
   };
 
   const save = async () => {
+    const dunningFee = fee.trim() ? parseDecimal(fee) : 0;
+    if (!Number.isFinite(dunningFee) || dunningFee < 0) {
+      setError(new ApiError('Mahngebühr: bitte einen Betrag wie 5,00 eingeben', 400));
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       const res = await api.saveOrganization(token, {
         ...org,
+        dunningFee,
         datevBeraterNr: intOrNull(berater),
         datevMandantNr: intOrNull(mandant),
       });
@@ -127,6 +136,27 @@ export default function SettingsScreen() {
         <CardContent className="gap-3">
           <Field label="IBAN" value={text(org.iban)} onChangeText={set('iban')} autoCapitalize="characters" />
           <Field label="BIC" value={text(org.bic)} onChangeText={set('bic')} autoCapitalize="characters" />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Mahnwesen</CardTitle>
+          <CardDescription>
+            Die Zahlungserinnerung ist kostenlos. Ab der 1. Mahnung wird diese Gebühr je Mahnung berechnet.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="gap-3">
+          <Field
+            label="Mahngebühr je Mahnung (€)"
+            value={fee}
+            onChangeText={(v) => {
+              setSaved(false);
+              setFee(v);
+            }}
+            keyboardType="decimal-pad"
+            placeholder="0,00"
+          />
         </CardContent>
       </Card>
 
