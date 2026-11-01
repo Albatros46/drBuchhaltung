@@ -9,6 +9,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HexFormat;
 import java.util.LinkedHashSet;
@@ -43,24 +44,31 @@ import org.springframework.transaction.annotation.Transactional;
 import org.w3c.dom.Document;
 
 import de.rechnio.config.CurrentUser;
+import de.rechnio.dto.ExpenseCategoryOption;
+import de.rechnio.dto.ExpenseRequest;
 import de.rechnio.dto.GeneratedFile;
 import de.rechnio.dto.IncomingInvoiceResponse;
 import de.rechnio.entity.AuditLog;
 import de.rechnio.entity.IncomingInvoice;
 import de.rechnio.entity.IncomingInvoiceFile;
+import de.rechnio.entity.Organization;
 import de.rechnio.entity.Supplier;
 import de.rechnio.enums.EInvoiceFormat;
+import de.rechnio.enums.ExpenseCategory;
 import de.rechnio.enums.IncomingDocType;
 import de.rechnio.enums.IncomingStatus;
+import de.rechnio.enums.Kontenrahmen;
 import de.rechnio.enums.ValidationStatus;
 import de.rechnio.exception.ApiException;
 import de.rechnio.repository.AuditLogRepository;
 import de.rechnio.repository.IncomingInvoiceFileRepository;
 import de.rechnio.repository.IncomingInvoiceRepository;
+import de.rechnio.repository.OrganizationRepository;
 import de.rechnio.repository.SupplierRepository;
 import de.rechnio.service.IncomingInvoiceService;
 import de.rechnio.service.SupplierService;
 import de.rechnio.util.DatevAccounts;
+import de.rechnio.util.Kontierung;
 
 @Service
 public class IncomingInvoiceServiceImpl implements IncomingInvoiceService {
@@ -75,16 +83,18 @@ public class IncomingInvoiceServiceImpl implements IncomingInvoiceService {
     private final IncomingInvoiceFileRepository files;
     private final SupplierRepository suppliers;
     private final SupplierService supplierService;
+    private final OrganizationRepository organizations;
     private final AuditLogRepository audit;
     private final Clock clock;
 
     public IncomingInvoiceServiceImpl(IncomingInvoiceRepository invoices, IncomingInvoiceFileRepository files,
                                       SupplierRepository suppliers, SupplierService supplierService,
-                                      AuditLogRepository audit, Clock clock) {
+                                      OrganizationRepository organizations, AuditLogRepository audit, Clock clock) {
         this.invoices = invoices;
         this.files = files;
         this.suppliers = suppliers;
         this.supplierService = supplierService;
+        this.organizations = organizations;
         this.audit = audit;
         this.clock = clock;
     }
@@ -112,22 +122,66 @@ public class IncomingInvoiceServiceImpl implements IncomingInvoiceService {
         }
         validate(inv, content);
         Supplier supplier = supplierService.assign(inv);
+        // Kontierung des Lieferanten uebernehmen, ausser die Rechnung ist § 13b (dann gilt der § 13b-Vorschlag)
+        if (supplier.getExpenseCategory() != null && !inv.isReverseCharge()) {
+            inv.assignExpense(supplier.getExpenseCategory(), supplier.getExpenseAccount(), supplier.getExpenseBuKey());
+        }
         invoices.save(inv);
         files.save(new IncomingInvoiceFile(inv.getId(), pdf ? "application/pdf" : "application/xml", content));
         audit.save(new AuditLog(user.organizationId(), "INCOMING_INVOICE", inv.getId(), "RECEIVED",
                 format + " " + label(inv), user.email()));
-        return IncomingInvoiceResponse.from(inv, kreditor(supplier));
+        return IncomingInvoiceResponse.from(inv, kreditor(supplier), kontenrahmen(user));
     }
 
     // Nicht readOnly: Rechnungen aus der Zeit vor der Lieferantenzuordnung werden hier nachtraeglich zugeordnet.
     @Override
     @Transactional
     public List<IncomingInvoiceResponse> list(CurrentUser user) {
+        Kontenrahmen kr = kontenrahmen(user);
         Map<UUID, Supplier> byId = suppliers.findByOrganizationId(user.organizationId()).stream()
                 .collect(Collectors.toMap(Supplier::getId, Function.identity()));
         return invoices.findByOrganizationIdOrderByReceivedAtDesc(user.organizationId()).stream()
-                .map(inv -> IncomingInvoiceResponse.from(inv, kreditor(supplierOf(inv, byId))))
+                .map(inv -> IncomingInvoiceResponse.from(inv, kreditor(supplierOf(inv, byId)), kr))
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public IncomingInvoiceResponse assignExpense(CurrentUser user, UUID id, ExpenseRequest req) {
+        IncomingInvoice inv = load(user, id);
+        if (req.category() == ExpenseCategory.CUSTOM && req.account() == null) {
+            throw ApiException.badRequest("Für ein eigenes Konto bitte die Kontonummer angeben");
+        }
+        String buKey = req.buKey() == null || req.buKey().isBlank() ? null : req.buKey().trim();
+        inv.assignExpense(req.category(), req.account(), buKey);
+        String detail = req.category() == ExpenseCategory.CUSTOM
+                ? "Konto " + req.account() + (buKey == null ? "" : ", BU " + buKey) : req.category().name();
+        if (req.rememberForSupplier()) {
+            Supplier supplier = inv.getSupplierId() == null ? supplierService.assign(inv)
+                    : suppliers.findById(inv.getSupplierId()).orElseGet(() -> supplierService.assign(inv));
+            supplier.rememberExpense(req.category(), inv.getExpenseAccount(), inv.getExpenseBuKey());
+            detail += " (für Lieferant gemerkt)";
+        }
+        audit.save(new AuditLog(user.organizationId(), "INCOMING_INVOICE", inv.getId(), "EXPENSE", detail, user.email()));
+        return response(inv);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ExpenseCategoryOption> expenseCategories(CurrentUser user) {
+        Kontenrahmen kr = kontenrahmen(user);
+        return Arrays.stream(ExpenseCategory.values())
+                .map(c -> new ExpenseCategoryOption(c, c.label(), Kontierung.accountLabel(c, kr, null), switch (c.tax()) {
+                    case AUTOMATIC -> c == ExpenseCategory.WARENEINGANG
+                            ? "Automatikkonto je Steuersatz (19 / 7 / 0 %)" : "Automatikkonto (USt und Vorsteuer)";
+                    case BU_KEY -> "Vorsteuer per BU-Schlüssel (9 = 19 %, 8 = 7 %)";
+                    case NONE -> c == ExpenseCategory.CUSTOM ? "Konto und BU-Schlüssel selbst angeben" : "ohne Vorsteuer";
+                }))
+                .toList();
+    }
+
+    private Kontenrahmen kontenrahmen(CurrentUser user) {
+        return organizations.findById(user.organizationId()).map(Organization::getKontenrahmen).orElse(Kontenrahmen.SKR03);
     }
 
     @Override
@@ -153,7 +207,9 @@ public class IncomingInvoiceServiceImpl implements IncomingInvoiceService {
     private IncomingInvoiceResponse response(IncomingInvoice inv) {
         Supplier supplier = inv.getSupplierId() == null ? supplierService.assign(inv)
                 : suppliers.findById(inv.getSupplierId()).orElseGet(() -> supplierService.assign(inv));
-        return IncomingInvoiceResponse.from(inv, kreditor(supplier));
+        Kontenrahmen kr = organizations.findById(inv.getOrganizationId()).map(Organization::getKontenrahmen)
+                .orElse(Kontenrahmen.SKR03);
+        return IncomingInvoiceResponse.from(inv, kreditor(supplier), kr);
     }
 
     private Supplier supplierOf(IncomingInvoice inv, Map<UUID, Supplier> byId) {
@@ -251,7 +307,8 @@ public class IncomingInvoiceServiceImpl implements IncomingInvoiceService {
                 BigDecimal lineNet = item.getLineTotalAmount() != null ? item.getLineTotalAmount()
                         : lineNet(item.getPrice(), item.getQuantity(), item.getBasisQuantity());
                 inv.addLine(p == null ? null : p.getName(), item.getQuantity(), p == null ? null : p.getUnit(),
-                        item.getPrice(), p == null ? null : p.getVATPercent(), scale(lineNet));
+                        item.getPrice(), p == null ? null : p.getVATPercent(), scale(lineNet),
+                        p == null ? null : p.getTaxCategoryCode());
             }
         }
     }

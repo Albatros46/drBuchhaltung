@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.UUID;
 
 import de.rechnio.config.CurrentUser;
+import de.rechnio.dto.ExpenseCategoryOption;
+import de.rechnio.dto.ExpenseRequest;
 import de.rechnio.dto.GeneratedFile;
 import de.rechnio.dto.IncomingInvoiceResponse;
 
@@ -22,4 +24,10 @@ public interface IncomingInvoiceService {
 
     /** Die unveraenderte Originaldatei. */
     GeneratedFile original(CurrentUser user, UUID id);
+
+    /** Kontierung (Gegenkonto) fuer den DATEV-Export setzen, optional als Vorschlag fuer den Lieferanten merken. */
+    IncomingInvoiceResponse assignExpense(CurrentUser user, UUID id, ExpenseRequest request);
+
+    /** Waehlbare Kontierungen mit den Konten im Kontenrahmen der Firma. */
+    List<ExpenseCategoryOption> expenseCategories(CurrentUser user);
 }

@@ -27,12 +27,14 @@ public class IncomingInvoiceLine {
     private BigDecimal unitPrice;
     private BigDecimal vatRate;
     private BigDecimal netAmount;
+    private String taxCategory;
 
     protected IncomingInvoiceLine() {
     }
 
     IncomingInvoiceLine(IncomingInvoice invoice, int position, String description, BigDecimal quantity, String unit,
-                        BigDecimal unitPrice, BigDecimal vatRate, BigDecimal netAmount) {
+                        BigDecimal unitPrice, BigDecimal vatRate, BigDecimal netAmount, String taxCategory) {
+        this.taxCategory = taxCategory;
         this.id = UUID.randomUUID();
         this.invoice = invoice;
         this.position = position;
@@ -51,4 +53,5 @@ public class IncomingInvoiceLine {
     public BigDecimal getUnitPrice() { return unitPrice; }
     public BigDecimal getVatRate() { return vatRate; }
     public BigDecimal getNetAmount() { return netAmount; }
+    public String getTaxCategory() { return taxCategory; }
 }

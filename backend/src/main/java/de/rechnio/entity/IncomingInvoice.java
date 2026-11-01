@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.UUID;
 
 import de.rechnio.enums.EInvoiceFormat;
+import de.rechnio.enums.ExpenseCategory;
 import de.rechnio.enums.IncomingDocType;
 import de.rechnio.enums.IncomingStatus;
 import de.rechnio.enums.ValidationStatus;
@@ -56,6 +57,12 @@ public class IncomingInvoice {
     private BigDecimal vatTotal;
     private BigDecimal grossTotal;
 
+    /** Kontierung fuer den DATEV-Export; bei CUSTOM gelten expenseAccount und expenseBuKey. */
+    @Enumerated(EnumType.STRING)
+    private ExpenseCategory expenseCategory;
+    private Integer expenseAccount;
+    private String expenseBuKey;
+
     @Enumerated(EnumType.STRING)
     private ValidationStatus validationStatus;
     private String validationMessages;
@@ -83,7 +90,25 @@ public class IncomingInvoice {
 
     public void addLine(String description, BigDecimal quantity, String unit, BigDecimal unitPrice,
                         BigDecimal vatRate, BigDecimal netAmount) {
-        lines.add(new IncomingInvoiceLine(this, lines.size() + 1, description, quantity, unit, unitPrice, vatRate, netAmount));
+        addLine(description, quantity, unit, unitPrice, vatRate, netAmount, null);
+    }
+
+    /** @param taxCategory Steuerkategorie nach EN 16931 (S, Z, E, AE, K, ...) oder null */
+    public void addLine(String description, BigDecimal quantity, String unit, BigDecimal unitPrice,
+                        BigDecimal vatRate, BigDecimal netAmount, String taxCategory) {
+        lines.add(new IncomingInvoiceLine(this, lines.size() + 1, description, quantity, unit, unitPrice, vatRate,
+                netAmount, taxCategory));
+    }
+
+    /** Mindestens eine Position mit Steuerschuldnerschaft des Leistungsempfaengers (§ 13b, Kategorie AE). */
+    public boolean isReverseCharge() {
+        return lines.stream().anyMatch(l -> "AE".equalsIgnoreCase(l.getTaxCategory()));
+    }
+
+    public void assignExpense(ExpenseCategory category, Integer account, String buKey) {
+        this.expenseCategory = category;
+        this.expenseAccount = category == ExpenseCategory.CUSTOM ? account : null;
+        this.expenseBuKey = category == ExpenseCategory.CUSTOM ? buKey : null;
     }
 
     public void supplier(String name, String street, String zip, String city, String country,
@@ -142,6 +167,9 @@ public class IncomingInvoice {
     public BigDecimal getNetTotal() { return netTotal; }
     public BigDecimal getVatTotal() { return vatTotal; }
     public BigDecimal getGrossTotal() { return grossTotal; }
+    public ExpenseCategory getExpenseCategory() { return expenseCategory; }
+    public Integer getExpenseAccount() { return expenseAccount; }
+    public String getExpenseBuKey() { return expenseBuKey; }
     public ValidationStatus getValidationStatus() { return validationStatus; }
     public String getValidationMessages() { return validationMessages; }
     public String getOriginalFilename() { return originalFilename; }

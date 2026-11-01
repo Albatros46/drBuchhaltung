@@ -35,6 +35,7 @@ import de.rechnio.repository.SupplierRepository;
 import de.rechnio.service.DatevExportService;
 import de.rechnio.service.SupplierService;
 import de.rechnio.util.DatevAccounts;
+import de.rechnio.util.Kontierung;
 import de.rechnio.util.VatCalculator;
 
 /**
@@ -153,8 +154,8 @@ public class DatevExportServiceImpl implements DatevExportService {
         return String.join(";",
                 amount(part.gross().abs()), q(sollHaben), q("EUR"), "", "", q(""),
                 String.valueOf(kreditor),
-                String.valueOf(DatevAccounts.expense(org.getKontenrahmen(), part.rate())),
-                q(""), inv.getIssueDate().format(BELEGDATUM),
+                String.valueOf(Kontierung.account(inv, org.getKontenrahmen(), part.rate())),
+                q(Kontierung.buKey(inv, part.rate())), inv.getIssueDate().format(BELEGDATUM),
                 q(belegfeld(inv.getNumber())), q(""), "", q(truncate(text, 60)));
     }
 

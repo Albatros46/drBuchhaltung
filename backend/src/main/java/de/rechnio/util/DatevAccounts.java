@@ -34,12 +34,5 @@ public final class DatevAccounts {
         };
     }
 
-    /** Aufwandskonto fuer Eingangsrechnungen: Wareneingang mit 19 %, 7 % oder ohne Vorsteuer. */
-    public static int expense(Kontenrahmen kontenrahmen, BigDecimal rate) {
-        boolean skr04 = kontenrahmen == Kontenrahmen.SKR04;
-        int r = rate == null ? 0 : rate.intValue();
-        if (r == 19) return skr04 ? 5400 : 3400;
-        if (r == 7) return skr04 ? 5300 : 3300;
-        return skr04 ? 5200 : 3200;
-    }
+    // Aufwandskonten fuer Eingangsrechnungen: siehe ExpenseCategory und Kontierung
 }

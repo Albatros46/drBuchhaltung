@@ -14,6 +14,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -22,10 +23,13 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import de.rechnio.config.CurrentUser;
+import de.rechnio.dto.ExpenseCategoryOption;
+import de.rechnio.dto.ExpenseRequest;
 import de.rechnio.dto.GeneratedFile;
 import de.rechnio.dto.IncomingInvoiceResponse;
 import de.rechnio.dto.PaidRequest;
 import de.rechnio.service.IncomingInvoiceService;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/incoming-invoices")
@@ -58,6 +62,17 @@ public class IncomingInvoiceController {
     public IncomingInvoiceResponse paid(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
                                         @RequestBody(required = false) PaidRequest request) {
         return incomingInvoiceService.markPaid(CurrentUser.from(jwt), id, request == null ? null : request.paidAt());
+    }
+
+    @GetMapping("/expense-categories")
+    public List<ExpenseCategoryOption> expenseCategories(@AuthenticationPrincipal Jwt jwt) {
+        return incomingInvoiceService.expenseCategories(CurrentUser.from(jwt));
+    }
+
+    @PutMapping("/{id}/expense")
+    public IncomingInvoiceResponse assignExpense(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
+                                                 @Valid @RequestBody ExpenseRequest request) {
+        return incomingInvoiceService.assignExpense(CurrentUser.from(jwt), id, request);
     }
 
     @GetMapping("/{id}/original")
