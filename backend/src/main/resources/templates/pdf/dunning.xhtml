@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org" lang="de">
+<head>
+<meta charset="UTF-8"/>
+<title th:text="${v.title}">Zahlungserinnerung</title>
+<style th:replace="~{letter :: style}"></style>
+</head>
+<body>
+
+<th:block th:replace="~{letter :: briefkopf(${v.letter})}"></th:block>
+
+<div class="info">
+  <table>
+    <tr><td class="k">Datum</td><td th:text="${v.issueDate}">01.11.2026</td></tr>
+    <tr><td class="k">Rechnungs-Nr.</td><td th:text="${v.invoiceNumber}">RE-2026-0001</td></tr>
+    <tr><td class="k">Rechnungsdatum</td><td th:text="${v.invoiceDate}">01.10.2026</td></tr>
+    <tr><td class="k">Kunden-Nr.</td><td th:text="${v.customerNumber}">1</td></tr>
+    <tr><td class="k">Zahlbar bis</td><td th:text="${v.deadline}">11.11.2026</td></tr>
+  </table>
+</div>
+
+<div class="content">
+  <h1 th:text="${v.title} + ' zu Rechnung ' + ${v.invoiceNumber}">Zahlungserinnerung zu Rechnung RE-2026-0001</h1>
+  <p>Sehr geehrte Damen und Herren,</p>
+  <p th:text="${v.text}">Text</p>
+
+  <table class="items">
+    <thead>
+      <tr><th>Position</th><th class="r">Betrag</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td th:text="'Rechnung ' + ${v.invoiceNumber} + ' vom ' + ${v.invoiceDate} + ', fällig seit ' + ${v.invoiceDueDate}">Rechnung</td>
+        <td class="r" th:text="${v.openAmount}">0,00 €</td>
+      </tr>
+      <tr th:each="f : ${v.fees}">
+        <td th:text="${f.label}">Mahngebühr</td>
+        <td class="r" th:text="${f.amount}">0,00 €</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <table class="totals">
+    <tr class="gross"><td>Offener Gesamtbetrag</td><td class="r" th:text="${v.totalDue}">0,00 €</td></tr>
+  </table>
+
+  <p class="note" th:text="${v.paymentText}">Zahlungshinweis</p>
+  <p class="note">Sollten Sie die Zahlung inzwischen veranlasst haben, betrachten Sie dieses Schreiben bitte als gegenstandslos.</p>
+  <p class="note" th:unless="${v.finalNotice}">Bei Fragen zur Rechnung melden Sie sich gerne bei uns.</p>
+  <p class="note">Mit freundlichen Grüßen<br/><span th:text="${v.letter.senderName}">Firma</span></p>
+</div>
+
+</body>
+</html>

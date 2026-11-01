@@ -1,5 +1,7 @@
 package de.rechnio.service.impl;
 
+import java.math.BigDecimal;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +46,7 @@ public class OrganizationServiceImpl implements OrganizationService {
         o.setEmail(dto.email());
         o.setContactName(dto.contactName());
         o.setPhone(dto.phone());
+        o.setDunningFee(dto.dunningFee() == null ? BigDecimal.ZERO : dto.dunningFee());
         o.setDatevBeraterNr(dto.datevBeraterNr());
         o.setDatevMandantNr(dto.datevMandantNr());
         return OrganizationDto.from(o);

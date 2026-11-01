@@ -1,5 +1,6 @@
 package de.rechnio.entity;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -31,6 +32,8 @@ public class Organization {
     private String email;
     private String contactName;
     private String phone;
+    /** Mahngebuehr je Mahnung ab der 1. Mahnung (Zahlungserinnerung kostenlos). */
+    private BigDecimal dunningFee = BigDecimal.ZERO;
     private Integer datevBeraterNr;
     private Integer datevMandantNr;
     private Instant createdAt;
@@ -73,6 +76,8 @@ public class Organization {
     public void setContactName(String contactName) { this.contactName = contactName; }
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
+    public BigDecimal getDunningFee() { return dunningFee; }
+    public void setDunningFee(BigDecimal dunningFee) { this.dunningFee = dunningFee; }
     public Integer getDatevBeraterNr() { return datevBeraterNr; }
     public void setDatevBeraterNr(Integer datevBeraterNr) { this.datevBeraterNr = datevBeraterNr; }
     public Integer getDatevMandantNr() { return datevMandantNr; }
