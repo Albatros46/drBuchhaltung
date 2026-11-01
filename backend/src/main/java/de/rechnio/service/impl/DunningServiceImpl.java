@@ -29,6 +29,7 @@ import de.rechnio.entity.Customer;
 import de.rechnio.entity.Dunning;
 import de.rechnio.entity.Invoice;
 import de.rechnio.entity.Organization;
+import de.rechnio.entity.OrganizationLogo;
 import de.rechnio.enums.DocType;
 import de.rechnio.enums.DunningLevel;
 import de.rechnio.enums.InvoiceStatus;
@@ -37,6 +38,7 @@ import de.rechnio.repository.AuditLogRepository;
 import de.rechnio.repository.CustomerRepository;
 import de.rechnio.repository.DunningRepository;
 import de.rechnio.repository.InvoiceRepository;
+import de.rechnio.repository.OrganizationLogoRepository;
 import de.rechnio.repository.OrganizationRepository;
 import de.rechnio.service.DunningService;
 import de.rechnio.service.MailService;
@@ -51,18 +53,21 @@ public class DunningServiceImpl implements DunningService {
     private final CustomerRepository customers;
     private final OrganizationRepository organizations;
     private final TemplateEngine pdfTemplateEngine;
+    private final OrganizationLogoRepository logos;
     private final MailService mailService;
     private final AuditLogRepository audit;
     private final Clock clock;
 
     public DunningServiceImpl(DunningRepository dunnings, InvoiceRepository invoices, CustomerRepository customers,
                               OrganizationRepository organizations, TemplateEngine pdfTemplateEngine,
-                              MailService mailService, AuditLogRepository audit, Clock clock) {
+                              MailService mailService, AuditLogRepository audit, Clock clock,
+                              OrganizationLogoRepository logos) {
         this.dunnings = dunnings;
         this.invoices = invoices;
         this.customers = customers;
         this.organizations = organizations;
         this.pdfTemplateEngine = pdfTemplateEngine;
+        this.logos = logos;
         this.mailService = mailService;
         this.audit = audit;
         this.clock = clock;
@@ -133,7 +138,7 @@ public class DunningServiceImpl implements DunningService {
         List<Dunning> history = history(user, inv.getId());
 
         Context ctx = new Context(Locale.GERMANY);
-        ctx.setVariable("v", view(d, history, inv, org, customer));
+        ctx.setVariable("v", view(d, history, inv, org, customer, logos.findById(org.getId()).orElse(null)));
         String xhtml = pdfTemplateEngine.process("dunning", ctx);
         return new PdfDocument(fileName(d, inv), PdfRenderer.toPdfA(xhtml));
     }
@@ -175,7 +180,8 @@ public class DunningServiceImpl implements DunningService {
 
     // --- Inhalt ---
 
-    static View view(Dunning d, List<Dunning> history, Invoice inv, Organization org, Customer customer) {
+    static View view(Dunning d, List<Dunning> history, Invoice inv, Organization org, Customer customer,
+                     OrganizationLogo logo) {
         List<FeeRow> fees = new ArrayList<>();
         for (Dunning h : upTo(d, history)) {
             if (h.getFee().signum() > 0) {
@@ -190,7 +196,7 @@ public class DunningServiceImpl implements DunningService {
         return new View(d.getLevel().title(), date(d.getIssueDate()), date(d.getDeadline()), inv.getNumber(),
                 date(inv.getIssueDate()), date(inv.getDueDate()), customer.getCustomerNumber(),
                 money(d.getOpenAmount()), fees, money(totalDue), intro(d.getLevel(), inv), paymentText,
-                d.getLevel().next() == null, Letterhead.of(org, customer));
+                d.getLevel().next() == null, Letterhead.of(org, customer, logo));
     }
 
     private static String intro(DunningLevel level, Invoice inv) {

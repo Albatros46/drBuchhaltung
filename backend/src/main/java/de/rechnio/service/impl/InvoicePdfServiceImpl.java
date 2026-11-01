@@ -21,11 +21,13 @@ import de.rechnio.entity.Customer;
 import de.rechnio.entity.Invoice;
 import de.rechnio.entity.InvoiceLine;
 import de.rechnio.entity.Organization;
+import de.rechnio.entity.OrganizationLogo;
 import de.rechnio.enums.DocType;
 import de.rechnio.enums.InvoiceStatus;
 import de.rechnio.exception.ApiException;
 import de.rechnio.repository.CustomerRepository;
 import de.rechnio.repository.InvoiceRepository;
+import de.rechnio.repository.OrganizationLogoRepository;
 import de.rechnio.repository.OrganizationRepository;
 import de.rechnio.service.InvoicePdfService;
 import de.rechnio.util.GermanFormat;
@@ -40,13 +42,16 @@ public class InvoicePdfServiceImpl implements InvoicePdfService {
     private final CustomerRepository customers;
     private final OrganizationRepository organizations;
     private final TemplateEngine pdfTemplateEngine;
+    private final OrganizationLogoRepository logos;
 
     public InvoicePdfServiceImpl(InvoiceRepository invoices, CustomerRepository customers,
-                                 OrganizationRepository organizations, TemplateEngine pdfTemplateEngine) {
+                                 OrganizationRepository organizations, TemplateEngine pdfTemplateEngine,
+                                 OrganizationLogoRepository logos) {
         this.invoices = invoices;
         this.customers = customers;
         this.organizations = organizations;
         this.pdfTemplateEngine = pdfTemplateEngine;
+        this.logos = logos;
     }
 
     /** Werte fuer die Vorlage, bereits deutsch formatiert. */
@@ -73,7 +78,7 @@ public class InvoicePdfServiceImpl implements InvoicePdfService {
         Customer customer = customers.findByIdAndOrganizationId(inv.getCustomerId(), user.organizationId())
                 .orElseThrow(() -> ApiException.notFound("Kunde"));
 
-        View view = view(inv, org, customer);
+        View view = view(inv, org, customer, logos.findById(org.getId()).orElse(null));
         Context ctx = new Context(Locale.GERMANY);
         ctx.setVariable("v", view);
         String xhtml = pdfTemplateEngine.process("invoice", ctx);
@@ -82,7 +87,7 @@ public class InvoicePdfServiceImpl implements InvoicePdfService {
         return new PdfDocument(base.replaceAll("[^A-Za-z0-9._-]", "_") + ".pdf", PdfRenderer.toPdfA(xhtml));
     }
 
-    static View view(Invoice inv, Organization org, Customer customer) {
+    static View view(Invoice inv, Organization org, Customer customer, OrganizationLogo logo) {
         boolean draft = inv.getStatus() == InvoiceStatus.DRAFT;
         String title = switch (inv.getDocType()) {
             case RECHNUNG -> "Rechnung";
@@ -113,7 +118,7 @@ public class InvoicePdfServiceImpl implements InvoicePdfService {
                 serviceDate(inv.getServiceDateFrom(), inv.getServiceDateTo()), date(inv.getDueDate()),
                 customer.getCustomerNumber(), inv.getIntroText(), inv.getTaxMode().legalNote(), paymentText,
                 lines, vatRows, money(inv.getNetTotal()), money(inv.getVatTotal()), money(inv.getGrossTotal()),
-                Letterhead.of(org, customer));
+                Letterhead.of(org, customer, logo));
     }
 
     private static Line line(InvoiceLine l) {
