@@ -23,8 +23,8 @@ cd backend
 mvn spring-boot:run
 ```
 
-In IntelliJ in der Run-Konfiguration *Working directory* auf `backend` setzen (`$MODULE_WORKING_DIR$`).
-Sonst legt H2 eine neue, leere Datenbank unter `data/` im Projektordner an.
+Auch beim Start im Projektordner (z. B. IntelliJ) wird die Datenbank in `backend/data/` verwendet.
+Anderer Ordner: `-Drechnio.data-dir=...`.
 
 **App** (zweites Terminal):
 

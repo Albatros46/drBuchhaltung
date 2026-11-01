@@ -4,10 +4,11 @@ server:
 spring:
   application:
     name: rechnio
-  # Lokal: dateibasierte H2-Datenbank in ./data (kein DB-Server noetig).
+  # Lokal: dateibasierte H2-Datenbank in backend/data (kein DB-Server noetig); auch beim Start im Projektordner,
+  # siehe RechnioApplication. Anderer Ordner: -Drechnio.data-dir=...
   # Fuer Produktion: Profil "postgres" aktivieren (siehe application-postgres.yml).
   datasource:
-    url: jdbc:h2:file:./data/rechnio;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    url: jdbc:h2:file:${rechnio.data-dir:./data}/rechnio;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
     username: sa
     password:
   jpa:
