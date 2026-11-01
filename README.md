@@ -63,6 +63,7 @@ de.rechnio
 | GET/PUT | `/api/organization` | Firmenstammdaten |
 | GET/POST/PUT | `/api/customers` | Kunden |
 | GET/POST/PUT/DELETE | `/api/invoices` | Entwürfe von Rechnungen und Angeboten |
+| GET/POST/DELETE | `/api/organization/logo` | Firmenlogo (PNG/JPEG bis 1 MB) für den Briefkopf aller Belege |
 | GET | `/api/invoices/{id}/pdf` | Beleg als PDF/A-3b (DIN 5008; Entwürfe als ENTWURF markiert) |
 | GET | `/api/invoices/{id}/zugferd` | E-Rechnung ZUGFeRD / Factur-X (EN16931): PDF/A-3 mit eingebettetem XML |
 | GET | `/api/invoices/{id}/xrechnung` | E-Rechnung XRechnung 3.0 (CII-XML) |
@@ -153,7 +154,6 @@ mvn test
 
 ## Noch offen
 
-- Logo im PDF-Briefkopf
 - Aufwandskonto je Eingangsrechnung wählbar; § 13b bei Eingangsrechnungen
 - DATEV-Stammdatenexport (Debitoren/Kreditoren)
 - E-Rechnungen per E-Mail empfangen (Postfach-Abruf)
