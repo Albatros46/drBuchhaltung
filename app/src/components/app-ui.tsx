@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ComponentRef, ReactNode, RefObject } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, TextInputProps, View } from 'react-native';
 
 import { Badge } from '@/components/ui/badge';
@@ -11,9 +11,11 @@ import { statusLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /** Scrollbarer Bildschirm mit einheitlichem Rand und maximaler Breite fuer Web und Tablet. */
-export function Screen({ children }: { children: ReactNode }) {
+export type ScrollRef = RefObject<ComponentRef<typeof ScrollView> | null>;
+
+export function Screen({ children, scrollRef }: { children: ReactNode; scrollRef?: ScrollRef }) {
   return (
-    <ScrollView className="flex-1 bg-background" contentContainerClassName="p-4 pb-12">
+    <ScrollView ref={scrollRef} className="flex-1 bg-background" contentContainerClassName="p-4 pb-12">
       <View className="w-full max-w-2xl gap-3 self-center">{children}</View>
     </ScrollView>
   );

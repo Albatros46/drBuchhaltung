@@ -64,6 +64,21 @@ export default function ExportScreen() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Listen</CardTitle>
+          <CardDescription>CSV-Dateien für Excel oder andere Programme.</CardDescription>
+        </CardHeader>
+        <CardContent className="gap-3">
+          <ActionButton
+            title="Kunden (CSV)"
+            variant="outline"
+            disabled={busy}
+            onPress={() => download('/api/customers/export', 'Kunden.csv')}
+          />
+        </CardContent>
+      </Card>
+
       <ErrorBox message={error?.message ?? null} errors={error?.errors} />
     </Screen>
   );

@@ -16,4 +16,10 @@ public interface CustomerService {
     CustomerResponse create(CurrentUser user, CustomerRequest request);
 
     CustomerResponse update(CurrentUser user, UUID id, CustomerRequest request);
+
+    /** Nur Kunden ohne Belege; Kunden mit Rechnungen muessen fuer die Aufbewahrung (GoBD) erhalten bleiben. */
+    void delete(CurrentUser user, UUID id);
+
+    /** Kundenliste als CSV (Semikolon, UTF-8) fuer Excel. */
+    String exportCsv(CurrentUser user);
 }

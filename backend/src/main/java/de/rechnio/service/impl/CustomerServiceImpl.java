@@ -12,15 +12,18 @@ import de.rechnio.dto.CustomerResponse;
 import de.rechnio.entity.Customer;
 import de.rechnio.exception.ApiException;
 import de.rechnio.repository.CustomerRepository;
+import de.rechnio.repository.InvoiceRepository;
 import de.rechnio.service.CustomerService;
 
 @Service
 public class CustomerServiceImpl implements CustomerService {
 
     private final CustomerRepository customers;
+    private final InvoiceRepository invoices;
 
-    public CustomerServiceImpl(CustomerRepository customers) {
+    public CustomerServiceImpl(CustomerRepository customers, InvoiceRepository invoices) {
         this.customers = customers;
+        this.invoices = invoices;
     }
 
     @Override
@@ -52,6 +55,36 @@ public class CustomerServiceImpl implements CustomerService {
         c.setName(req.name());
         apply(c, req);
         return CustomerResponse.from(c);
+    }
+
+    @Override
+    @Transactional
+    public void delete(CurrentUser user, UUID id) {
+        Customer c = load(user, id);
+        if (invoices.existsByOrganizationIdAndCustomerId(user.organizationId(), id)) {
+            throw ApiException.conflict("Der Kunde hat Belege und muss für die Aufbewahrung erhalten bleiben. "
+                    + "Entwürfe können vorher gelöscht werden.");
+        }
+        customers.delete(c);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String exportCsv(CurrentUser user) {
+        StringBuilder csv = new StringBuilder("Kundennummer;Name;Straße;PLZ;Ort;Land;E-Mail;USt-IdNr.;Leitweg-ID\r\n");
+        for (Customer c : customers.findByOrganizationIdOrderByName(user.organizationId())) {
+            csv.append(String.join(";", String.valueOf(c.getCustomerNumber()), cell(c.getName()), cell(c.getStreet()),
+                    cell(c.getZip()), cell(c.getCity()), cell(c.getCountry()), cell(c.getEmail()), cell(c.getUstId()),
+                    cell(c.getLeitwegId()))).append("\r\n");
+        }
+        return csv.toString();
+    }
+
+    /** Immer in Anfuehrungszeichen; fuehrende = + - @ werden entschaerft, damit Excel keine Formel ausfuehrt. */
+    private static String cell(String v) {
+        if (v == null) return "\"\"";
+        String s = v.matches("^[=+\\-@].*") ? "'" + v : v;
+        return "\"" + s.replace("\"", "\"\"") + "\"";
     }
 
     private static void apply(Customer c, CustomerRequest req) {

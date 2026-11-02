@@ -274,6 +274,9 @@ export const api = {
   customers: (t: string) => request<Customer[]>('/api/customers', t),
   createCustomer: (t: string, c: Omit<Customer, 'id' | 'customerNumber'>) =>
     request<Customer>('/api/customers', t, { method: 'POST', body: json(c) }),
+  updateCustomer: (t: string, id: string, c: Omit<Customer, 'id' | 'customerNumber'>) =>
+    request<Customer>(`/api/customers/${id}`, t, { method: 'PUT', body: json(c) }),
+  deleteCustomer: (t: string, id: string) => request<void>(`/api/customers/${id}`, t, { method: 'DELETE' }),
 
   invoices: (t: string) => request<Invoice[]>('/api/invoices', t),
   invoice: (t: string, id: string) => request<Invoice>(`/api/invoices/${id}`, t),

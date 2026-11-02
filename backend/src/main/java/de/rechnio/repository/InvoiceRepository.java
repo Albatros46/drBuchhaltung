@@ -16,6 +16,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
 
     Optional<Invoice> findByIdAndOrganizationId(UUID id, UUID organizationId);
 
+    boolean existsByOrganizationIdAndCustomerId(UUID organizationId, UUID customerId);
+
     List<Invoice> findByOrganizationIdAndDocTypeInAndIssueDateBetweenOrderByIssueDateAscNumberAsc(
             UUID organizationId, List<DocType> types, LocalDate from, LocalDate to);
 }
