@@ -40,7 +40,11 @@ Auf einem echten Handy erreicht die App den Rechner nicht über `localhost`. Dan
 set EXPO_PUBLIC_API_URL=http://192.168.0.10:8080
 ```
 
-Erster Ablauf in der App: Konto erstellen → Firma und Steuer ausfüllen (Anschrift, Steuernummer) → Kunde anlegen → Neue Rechnung → Ausstellen.
+Erster Ablauf in der App: Konto erstellen → Firmendaten ausfüllen (Firmenname oben rechts antippen: Anschrift,
+Steuernummer) → Kunde anlegen → optional Artikel anlegen → Neue Rechnung → Ausstellen.
+
+Das Menü oben führt zu Übersicht, Neue Rechnung, Kunden, Artikel, Eingangsrechnungen und Export
+(DATEV sowie Kunden- und Artikellisten als CSV für Excel).
 
 ### Beispieldaten
 
@@ -74,7 +78,9 @@ de.rechnio
 |---|---|---|
 | POST | `/api/auth/register`, `/api/auth/login` | Konto anlegen, anmelden (JWT) |
 | GET/PUT | `/api/organization` | Firmenstammdaten |
-| GET/POST/PUT | `/api/customers` | Kunden |
+| GET/POST/PUT/DELETE | `/api/customers` | Kunden; Löschen nur ohne Belege (GoBD, sonst 409) |
+| GET/POST/PUT/DELETE | `/api/products` | Artikel/Leistungen als Vorlagen für Positionen |
+| GET | `/api/customers/export`, `/api/products/export` | Kunden- bzw. Artikelliste als CSV (UTF-8, Semikolon) |
 | GET/POST/PUT/DELETE | `/api/invoices` | Entwürfe von Rechnungen und Angeboten |
 | GET/POST/DELETE | `/api/organization/logo` | Firmenlogo (PNG/JPEG bis 1 MB) für den Briefkopf aller Belege |
 | GET | `/api/invoices/{id}/pdf` | Beleg als PDF/A-3b (DIN 5008; Entwürfe als ENTWURF markiert) |
