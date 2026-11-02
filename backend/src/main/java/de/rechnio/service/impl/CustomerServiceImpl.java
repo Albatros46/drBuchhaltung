@@ -1,5 +1,7 @@
 package de.rechnio.service.impl;
 
+import static de.rechnio.util.Csv.cell;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -78,13 +80,6 @@ public class CustomerServiceImpl implements CustomerService {
                     cell(c.getLeitwegId()))).append("\r\n");
         }
         return csv.toString();
-    }
-
-    /** Immer in Anfuehrungszeichen; fuehrende = + - @ werden entschaerft, damit Excel keine Formel ausfuehrt. */
-    private static String cell(String v) {
-        if (v == null) return "\"\"";
-        String s = v.matches("^[=+\\-@].*") ? "'" + v : v;
-        return "\"" + s.replace("\"", "\"\"") + "\"";
     }
 
     private static void apply(Customer c, CustomerRequest req) {

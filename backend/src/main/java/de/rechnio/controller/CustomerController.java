@@ -24,6 +24,7 @@ import de.rechnio.config.CurrentUser;
 import de.rechnio.dto.CustomerRequest;
 import de.rechnio.dto.CustomerResponse;
 import de.rechnio.service.CustomerService;
+import de.rechnio.util.Csv;
 import jakarta.validation.Valid;
 
 @RestController
@@ -67,7 +68,7 @@ public class CustomerController {
     /** Mit BOM, damit Excel Umlaute richtig erkennt. */
     @GetMapping("/export")
     public ResponseEntity<byte[]> export(@AuthenticationPrincipal Jwt jwt) {
-        byte[] csv = ("﻿" + customerService.exportCsv(CurrentUser.from(jwt))).getBytes(StandardCharsets.UTF_8);
+        byte[] csv = (Csv.BOM + customerService.exportCsv(CurrentUser.from(jwt))).getBytes(StandardCharsets.UTF_8);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"Kunden.csv\"")
                 .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
