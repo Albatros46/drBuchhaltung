@@ -48,6 +48,19 @@ export interface Customer {
   leitwegId?: string | null;
 }
 
+/** Artikel / Leistung als Vorlage fuer Rechnungspositionen. */
+export interface Product {
+  id: string;
+  productNumber: number;
+  name: string;
+  description: string | null;
+  unit: string;
+  unitPrice: number;
+  vatRate: number;
+}
+
+export type ProductInput = Omit<Product, 'id' | 'productNumber'>;
+
 export interface InvoiceLine {
   position: number;
   description: string;
@@ -277,6 +290,12 @@ export const api = {
   updateCustomer: (t: string, id: string, c: Omit<Customer, 'id' | 'customerNumber'>) =>
     request<Customer>(`/api/customers/${id}`, t, { method: 'PUT', body: json(c) }),
   deleteCustomer: (t: string, id: string) => request<void>(`/api/customers/${id}`, t, { method: 'DELETE' }),
+  products: (t: string) => request<Product[]>('/api/products', t),
+  createProduct: (t: string, p: ProductInput) =>
+    request<Product>('/api/products', t, { method: 'POST', body: json(p) }),
+  updateProduct: (t: string, id: string, p: ProductInput) =>
+    request<Product>(`/api/products/${id}`, t, { method: 'PUT', body: json(p) }),
+  deleteProduct: (t: string, id: string) => request<void>(`/api/products/${id}`, t, { method: 'DELETE' }),
 
   invoices: (t: string) => request<Invoice[]>('/api/invoices', t),
   invoice: (t: string, id: string) => request<Invoice>(`/api/invoices/${id}`, t),

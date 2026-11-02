@@ -7,9 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Text } from '@/components/ui/text';
-import { api, ApiError, Customer, DocType, LineInput } from '@/lib/api';
+import { api, ApiError, Customer, DocType, LineInput, Product } from '@/lib/api';
 import { useToken } from '@/lib/auth';
-import { money, parseDecimal, previewTotals, today } from '@/lib/format';
+import { money, parseDecimal, previewTotals, priceInput, today } from '@/lib/format';
 
 interface LineDraft {
   description: string;
@@ -26,6 +26,7 @@ export default function NewInvoiceScreen() {
   const token = useToken();
   const router = useRouter();
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [docType, setDocType] = useState<DocType>('RECHNUNG');
   const [serviceDate, setServiceDate] = useState(today());
@@ -36,6 +37,8 @@ export default function NewInvoiceScreen() {
   useFocusEffect(
     useCallback(() => {
       api.customers(token).then(setCustomers).catch((e: ApiError) => setError(e));
+      // ohne Artikel bleibt die Auswahl einfach weg
+      api.products(token).then(setProducts).catch(() => setProducts([]));
     }, [token]),
   );
 
@@ -50,6 +53,22 @@ export default function NewInvoiceScreen() {
 
   const update = (i: number, patch: Partial<LineDraft>) =>
     setLines((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+
+  // Artikel fuellt eine leere letzte Position, sonst kommt eine neue dazu
+  const addProduct = (p: Product) => {
+    const line: LineDraft = {
+      description: p.description ? `${p.name} – ${p.description}` : p.name,
+      quantity: '1',
+      unit: p.unit,
+      unitPrice: priceInput(p.unitPrice),
+      vatRate: p.vatRate,
+    };
+    setLines((prev) => {
+      const last = prev[prev.length - 1];
+      const lastEmpty = last && !last.description.trim() && !last.unitPrice.trim();
+      return lastEmpty ? [...prev.slice(0, -1), line] : [...prev, line];
+    });
+  };
 
   const save = async (issueNow: boolean) => {
     setError(null);
@@ -118,6 +137,17 @@ export default function NewInvoiceScreen() {
           <CardTitle>Positionen</CardTitle>
         </CardHeader>
         <CardContent className="gap-4">
+          {products.length > 0 && (
+            <View className="gap-2">
+              <Text variant="muted">Aus Artikeln übernehmen:</Text>
+              <View className="flex-row flex-wrap gap-2">
+                {products.map((p) => (
+                  <Chip key={p.id} label={`+ ${p.name}`} active={false} onPress={() => addProduct(p)} />
+                ))}
+              </View>
+              <Separator />
+            </View>
+          )}
           {lines.map((l, i) => (
             <View key={i} className="gap-3">
               {i > 0 && <Separator />}

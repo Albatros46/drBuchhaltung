@@ -76,6 +76,12 @@ export default function ExportScreen() {
             disabled={busy}
             onPress={() => download('/api/customers/export', 'Kunden.csv')}
           />
+          <ActionButton
+            title="Artikel (CSV)"
+            variant="outline"
+            disabled={busy}
+            onPress={() => download('/api/products/export', 'Artikel.csv')}
+          />
         </CardContent>
       </Card>
 

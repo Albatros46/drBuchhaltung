@@ -11,6 +11,7 @@ export const NAV_ITEMS: { href: Href & string; label: string }[] = [
   { href: '/', label: 'Übersicht' },
   { href: '/invoices/new', label: '+ Neue Rechnung' },
   { href: '/customers', label: 'Kunden' },
+  { href: '/products', label: 'Artikel' },
   { href: '/incoming', label: 'Eingangsrechnungen' },
   { href: '/export', label: 'Export' },
 ];

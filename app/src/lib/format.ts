@@ -4,6 +4,9 @@ const eur = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' 
 
 export const money = (v: number) => eur.format(v);
 
+/** Betrag fuer ein Eingabefeld: 48.5 -> "48,50". */
+export const priceInput = (v: number) => v.toFixed(2).replace('.', ',');
+
 /** ISO-Datum (2026-10-31) als 31.10.2026. */
 export const date = (iso: string | null) => (iso ? iso.split('-').reverse().join('.') : '–');
 

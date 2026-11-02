@@ -46,6 +46,7 @@ function RootNavigator() {
         <Stack.Screen name="invoices/new" options={{ title: 'Neue Rechnung' }} />
         <Stack.Screen name="invoices/[id]" options={{ title: 'Beleg' }} />
         <Stack.Screen name="customers" options={{ title: 'Kunden' }} />
+        <Stack.Screen name="products" options={{ title: 'Artikel' }} />
         <Stack.Screen name="settings" options={{ title: 'Firmendaten' }} />
         <Stack.Screen name="export" options={{ title: 'Export' }} />
         <Stack.Screen name="incoming/index" options={{ title: 'Eingangsrechnungen' }} />
