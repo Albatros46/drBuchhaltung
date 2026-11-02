@@ -9,7 +9,6 @@ import { Switch } from '@/components/ui/switch';
 import { Text } from '@/components/ui/text';
 import { api, ApiError, Organization } from '@/lib/api';
 import { useToken } from '@/lib/auth';
-import { openDocument } from '@/lib/download';
 import { parseDecimal } from '@/lib/format';
 
 const text = (v: string | null | undefined) => v ?? '';
@@ -25,20 +24,6 @@ export default function SettingsScreen() {
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
-  const year = new Date().getFullYear();
-  const [exportYear, setExportYear] = useState(year);
-
-  const download = async (path: string, filename: string) => {
-    setError(null);
-    try {
-      await openDocument(token, path, filename, 'text/csv');
-    } catch (e) {
-      setError(e as ApiError);
-    }
-  };
-  const downloadDatev = () =>
-    download(`/api/exports/datev?from=${exportYear}-01-01&to=${exportYear}-12-31`, `EXTF_Buchungsstapel_${exportYear}.csv`);
-  const downloadStammdaten = () => download('/api/exports/datev/stammdaten', 'EXTF_Debitoren_Kreditoren.csv');
 
   useEffect(() => {
     api
@@ -176,36 +161,6 @@ export default function SettingsScreen() {
             <Field label="Beraternummer" value={berater} onChangeText={setBerater} keyboardType="number-pad" />
             <Field label="Mandantennummer" value={mandant} onChangeText={setMandant} keyboardType="number-pad" />
           </View>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>DATEV-Export</CardTitle>
-          <CardDescription>
-            Buchungsstapel mit Ausgangs- und Eingangsrechnungen für Ihren Steuerberater. Die Stammdaten legen die
-            Personenkonten mit Name, Anschrift, USt-IdNr. und IBAN an; zuerst importieren. Vorher speichern, damit
-            Kontenrahmen und Nummern im Export stehen.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="gap-3">
-          <View className="flex-row gap-2">
-            {[year - 1, year].map((y) => (
-              <Chip key={y} label={String(y)} active={exportYear === y} onPress={() => setExportYear(y)} />
-            ))}
-          </View>
-          <ActionButton
-            title={`Buchungsstapel ${exportYear} herunterladen`}
-            variant="outline"
-            disabled={busy}
-            onPress={downloadDatev}
-          />
-          <ActionButton
-            title="Stammdaten (Debitoren/Kreditoren) herunterladen"
-            variant="outline"
-            disabled={busy}
-            onPress={downloadStammdaten}
-          />
         </CardContent>
       </Card>
 

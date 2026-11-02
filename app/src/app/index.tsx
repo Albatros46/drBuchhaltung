@@ -1,9 +1,8 @@
-import { Link, useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
-import { ActionButton, ErrorBox, Screen, StatusPill } from '@/components/app-ui';
-import { Button } from '@/components/ui/button';
+import { ErrorBox, Screen, StatusPill } from '@/components/app-ui';
 import { Card, CardContent } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { api, ApiError, Customer, Invoice } from '@/lib/api';
@@ -43,16 +42,6 @@ export default function OverviewScreen() {
 
   return (
     <Screen>
-      <View className="flex-row items-center justify-between">
-        <View>
-          <Text variant="large">{session.companyName}</Text>
-          <Text variant="muted">{session.email}</Text>
-        </View>
-        <Button variant="ghost" size="sm" onPress={signOut}>
-          <Text>Abmelden</Text>
-        </Button>
-      </View>
-
       <View className="flex-row gap-3">
         <Card className="flex-1 gap-1 py-4">
           <CardContent className="gap-1">
@@ -76,25 +65,7 @@ export default function OverviewScreen() {
         </View>
       )}
 
-      <ActionButton title="+ Neue Rechnung" onPress={() => router.push('/invoices/new')} />
-      <View className="flex-row justify-between">
-        <Link href="/customers" asChild>
-          <Button variant="link">
-            <Text>Kunden</Text>
-          </Button>
-        </Link>
-        <Link href="/incoming" asChild>
-          <Button variant="link">
-            <Text>Eingangsrechnungen</Text>
-          </Button>
-        </Link>
-        <Link href="/settings" asChild>
-          <Button variant="link">
-            <Text>Firma und Steuer</Text>
-          </Button>
-        </Link>
-      </View>
-
+      <Text className="mt-2 font-semibold">Belege</Text>
       <ErrorBox message={error} />
       {invoices === null && !error && <ActivityIndicator />}
       {invoices?.length === 0 && (
@@ -114,7 +85,7 @@ export default function OverviewScreen() {
                 <Text className="font-semibold">
                   {inv.number ?? `Entwurf (${inv.docType === 'ANGEBOT' ? 'Angebot' : 'Rechnung'})`}
                 </Text>
-                <StatusPill status={inv.status} />
+                <StatusPill status={inv.status} docType={inv.docType} />
               </View>
               <View className="flex-row items-center justify-between">
                 <Text>{customers[inv.customerId]?.name ?? '–'}</Text>

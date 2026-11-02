@@ -6,7 +6,7 @@ import { Button, type ButtonProps } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
-import { InvoiceStatus } from '@/lib/api';
+import { DocType, InvoiceStatus } from '@/lib/api';
 import { statusLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -48,7 +48,15 @@ export function ActionButton({ title, busy, disabled, ...props }: ButtonProps & 
   );
 }
 
-export function StatusPill({ status }: { status: InvoiceStatus }) {
+/** Rot nur fuer offene Rechnungen; ausgestellte Angebote und Stornos sind nichts, was bezahlt werden muss. */
+export function StatusPill({ status, docType }: { status: InvoiceStatus; docType?: DocType }) {
+  if (status === 'ISSUED' && docType && docType !== 'RECHNUNG') {
+    return (
+      <Badge variant="outline">
+        <Text>{docType === 'ANGEBOT' ? 'Angebot' : 'Storno'}</Text>
+      </Badge>
+    );
+  }
   const variant = status === 'PAID' ? 'default' : status === 'ISSUED' ? 'destructive' : 'outline';
   return (
     <Badge variant={variant}>

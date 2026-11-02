@@ -81,7 +81,7 @@ export default function InvoiceDetailScreen() {
         <CardHeader>
           <View className="flex-row items-center justify-between">
             <CardTitle>{title}</CardTitle>
-            <StatusPill status={inv.status} />
+            <StatusPill status={inv.status} docType={inv.docType} />
           </View>
           <CardDescription>
             Ausgestellt: {date(inv.issueDate)} · Leistung: {date(inv.serviceDateFrom)} · Fällig: {date(inv.dueDate)}
